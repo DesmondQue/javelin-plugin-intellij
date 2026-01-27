@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+*.log
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# JaCoCo
+*.exec
+
+# Generated reports (keep as example)
+# test-subject/report.csv
+
+# Context files (not for repo)
+GeneralContext.md
+OchiaiSBFLContext.md
+StartContext.md
