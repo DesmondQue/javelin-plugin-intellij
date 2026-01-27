@@ -7,8 +7,7 @@ Automated Spectrum-Based Fault Localization (SBFL) for Java using the Ochiai alg
 ```
 ├── javelin-core/    # Main SBFL engine (CLI tool)
 ├── test-subject/    # Sample project with intentional bugs for testing
-├── INSTALL.md       # Installation guide
-└── *.md             # Context documentation
+└── INSTALL.md       # Installation guide
 ```
 
 ## Quick Start
