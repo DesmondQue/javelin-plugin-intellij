@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,13 +38,17 @@ import com.javelin.core.model.TestResult;
 public class DataParser {
 
     /**
-     parses a jacoco execution data file and returns structured coverage data.
-     
-     @param execFile   path to the jacoco.exec file
-     @param classesDir path to the directory containing the compiled .class files
-     @return CoverageData containing parsed coverage information
-     @throws IOException if the file cannot be read
+     * @deprecated Use {@link #parseMultiple(List, Path)} instead for per-test coverage.
+     * This method uses aggregated coverage which produces inaccurate SBFL results.
+     * 
+     * Parses a single jacoco execution data file (aggregated coverage).
+     * 
+     * @param execFile   path to the jacoco.exec file
+     * @param classesDir path to the directory containing the compiled .class files
+     * @return CoverageData containing parsed coverage information
+     * @throws IOException if the file cannot be read
      */
+    @Deprecated
     public CoverageData parse(Path execFile, Path classesDir) throws IOException {
 
         ExecutionDataStore executionDataStore = new ExecutionDataStore();
@@ -114,8 +119,7 @@ public class DataParser {
             }
         }
 
-        // uses aggregated coverage (not per-test)
-        // create a synthetic test result based on overall coverage
+        //LEGACY: uses aggregated coverage (not per-test)
         Map<String, TestResult> testResults = extractTestResults(executionDataStore);
         Map<String, Map<String, Set<Integer>>> coveragePerTest = buildCoveragePerTest(
                 testResults, coveredLinesByClass);
@@ -124,16 +128,9 @@ public class DataParser {
     }
 
     /**
-      extracts test results from execution data
-      
-      Note: jacoco's exec file doesn't contain pass/fail information directly
-      in the real impl:
-      1. run tests through JUnit Platform Launcher programmatically
-      2. capture both coverage AND test results
-      3. merge data
-      
-      for current impl create placeholder test results
-      this will be enhanced in the CoverageRunner to capture actual test outcomes
+     * LEGACY: Used by deprecated parse() method.
+     * Extracts test results from execution data.
+     * Note: jacoco's exec file doesn't contain pass/fail information.
      */
     private Map<String, TestResult> extractTestResults(ExecutionDataStore executionDataStore) {
         Map<String, TestResult> results = new HashMap<>();
@@ -153,8 +150,9 @@ public class DataParser {
     }
 
     /**
-     builds per test coverage mapping
-     Note: with aggregated exec data, all tests share the same coverage. This is NOT final
+     * LEGACY: Used by deprecated parse() method
+     * with aggregated exec data, all tests share the same coverage
+     * use parseMultiple() for true per-test coverage
      */
     private Map<String, Map<String, Set<Integer>>> buildCoveragePerTest(
             Map<String, TestResult> testResults,
@@ -162,11 +160,85 @@ public class DataParser {
         
         Map<String, Map<String, Set<Integer>>> coveragePerTest = new HashMap<>();
         
-        for (String testId : testResults.keySet()) { //each test gets the full aggregated coverage
-            //TODO: this will be updated to per-test coverage in Phase 2 of development
+        for (String testId : testResults.keySet()) {
             coveragePerTest.put(testId, new HashMap<>(aggregatedCoverage));
         }
         
         return coveragePerTest;
+    }
+
+    /**
+     * parses multiple JaCoCo execution data files (one per test class) and builds
+     * true per-test coverage data
+     *
+     * @param execFiles  list of paths to jacoco-<ClassName>.exec files
+     * @param classesDir path to the directory containing the compiled .class files
+     * @return CoverageData containing per-test coverage information
+     * @throws IOException if any file cannot be read
+     */
+    public CoverageData parseMultiple(List<Path> execFiles, Path classesDir) throws IOException {
+        Map<String, TestResult> testResults = new HashMap<>();
+        Map<String, Map<String, Set<Integer>>> coveragePerTest = new HashMap<>();
+        Set<LineCoverage> allLineCoverage = new HashSet<>();
+
+        for (Path execFile : execFiles) {
+            String fileName = execFile.getFileName().toString();
+            String testClassName = fileName
+                    .replace("jacoco-", "")
+                    .replace(".exec", "");
+
+            ExecutionDataStore executionDataStore = new ExecutionDataStore();
+            SessionInfoStore sessionInfoStore = new SessionInfoStore();
+
+            try (FileInputStream fis = new FileInputStream(execFile.toFile())) {
+                ExecutionDataReader reader = new ExecutionDataReader(fis);
+                reader.setExecutionDataVisitor(executionDataStore);
+                reader.setSessionInfoVisitor(sessionInfoStore);
+                reader.read();
+            }
+
+            CoverageBuilder coverageBuilder = new CoverageBuilder();
+            Analyzer analyzer = new Analyzer(executionDataStore, coverageBuilder);
+            analyzeDirectory(analyzer, classesDir);
+
+            Map<String, Set<Integer>> testCoverage = new HashMap<>();
+
+            for (IClassCoverage classCoverage : coverageBuilder.getClasses()) {
+                String className = classCoverage.getName().replace('/', '.');
+                Set<Integer> coveredLines = new HashSet<>();
+
+                int firstLine = classCoverage.getFirstLine();
+                int lastLine = classCoverage.getLastLine();
+
+                for (int lineNum = firstLine; lineNum <= lastLine; lineNum++) {
+                    ILine line = classCoverage.getLine(lineNum);
+                    int status = line.getStatus();
+
+                    if (status != ICounter.EMPTY) {
+                        boolean covered = (status == ICounter.FULLY_COVERED ||
+                                           status == ICounter.PARTLY_COVERED);
+
+                        allLineCoverage.add(new LineCoverage(className, lineNum, covered));
+
+                        if (covered) {
+                            coveredLines.add(lineNum);
+                        }
+                    }
+                }
+
+                if (!coveredLines.isEmpty()) {
+                    testCoverage.put(className, coveredLines);
+                }
+            }
+
+            //add this test's coverage to the per-test map
+            coveragePerTest.put(testClassName, testCoverage);
+            
+            //create a test result - for now assume all passed
+            // TODO: integrate with JUnit execution to capture actual pass/fail status
+            testResults.put(testClassName, new TestResult(testClassName, true, null));
+        }
+
+        return new CoverageData(testResults, coveragePerTest, allLineCoverage);
     }
 }

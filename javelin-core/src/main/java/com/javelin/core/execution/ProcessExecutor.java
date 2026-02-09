@@ -153,16 +153,10 @@ public class ProcessExecutor {
 
     /**
       builds the OS specific command list
-      Windows: cmd.exe /c java ...
-      Linux/Mac: java ...
+      Note: ProcessBuilder handles paths with spaces correctly, so we don't need cmd.exe wrapper
      */
     private List<String> buildCommand(List<String> javaArgs) {
         List<String> command = new ArrayList<>();
-        
-        if (IS_WINDOWS) {
-            command.add("cmd.exe");
-            command.add("/c");
-        }
         
         command.add(getJavaExecutable());
         command.addAll(javaArgs);

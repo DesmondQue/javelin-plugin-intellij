@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.JarFile;
@@ -34,7 +37,6 @@ public class CoverageRunner {
 
     private Path tempDir;
     private Path jacocoAgentJar;
-    private Path execFile;
 
     public CoverageRunner(Path targetPath, Path testPath, String additionalClasspath) {
         this.targetPath = targetPath;
@@ -44,43 +46,99 @@ public class CoverageRunner {
     }
 
     /**
-     * runs all tests with JaCoCo coverage instrumentation
+     * Discovers test classes by walking the test path directory structure.
+     * Finds all files ending in Test.class or Tests.class.
      *
-     * @return Path to the generated jacoco.exec file, or null if execution failed
+     * @param dir the directory to search for test classes
+     * @return List of fully qualified class names (e.g., com.example.CalculatorTest)
+     * @throws IOException if directory traversal fails
+     */
+    private List<String> findTestClasses(Path dir) throws IOException {
+        List<String> testClasses = new ArrayList<>();
+        
+        Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                String fileName = file.getFileName().toString();
+                if (fileName.endsWith("Test.class") || fileName.endsWith("Tests.class")) {
+                    // Convert file path to fully qualified class name
+                    Path relativePath = dir.relativize(file);
+                    String className = relativePath.toString()
+                            .replace(".class", "")
+                            .replace(java.io.File.separatorChar, '.')
+                            .replace('/', '.');
+                    testClasses.add(className);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        
+        return testClasses;
+    }
+
+    /**
+     * runs all tests with JaCoCo coverage instrumentation, executing each test class
+     * in its own separate JVM process to enable per-test coverage collection
+     *
+     * @return List of Paths to the generated jacoco-<ClassName>.exec files
      * @throws IOException if temp files cannot be created
      */
-    public Path run() throws IOException {
+    public List<Path> run() throws IOException {
         setupTempDirectory();
         extractJacocoAgent();
 
         String classpath = buildClasspath();
-
-        List<String> javaArgs = buildJavaArgs(classpath);
-
-        System.out.println("      Executing test runner...");
-        ProcessExecutor.ExecutionResult result = processExecutor.executeJava(
-                javaArgs, 
-                tempDir, 
-                null
-        );
-
-        if (!result.stdout().isBlank()) {
-            System.out.println("      --- Test Output ---");
-            System.out.println(result.stdout());
+        
+        // Discover all test classes
+        List<String> testClasses = findTestClasses(testPath);
+        
+        if (testClasses.isEmpty()) {
+            System.err.println("      WARNING: No test classes found in " + testPath);
+            return new ArrayList<>();
         }
+        
+        System.out.println("      Found " + testClasses.size() + " test class(es)");
+        
+        List<Path> execFiles = new ArrayList<>();
+        
+        // Execute each test class in its own JVM process
+        for (String className : testClasses) {
+            // Generate unique exec file path for this test class
+            String simpleClassName = className.contains(".") 
+                    ? className.substring(className.lastIndexOf('.') + 1) 
+                    : className;
+            Path testExecFile = tempDir.resolve("jacoco-" + simpleClassName + ".exec");
+            
+            System.out.println("      Running test: " + className);
+            
+            List<String> javaArgs = buildJavaArgsForTest(classpath, testExecFile, className);
+            
+            ProcessExecutor.ExecutionResult result = processExecutor.executeJava(
+                    javaArgs, 
+                    tempDir, 
+                    null
+            );
 
-        if (!result.stderr().isBlank()) {
-            System.err.println("      --- Test Errors ---");
-            System.err.println(result.stderr());
+            if (!result.stdout().isBlank()) {
+                System.out.println("      --- Test Output (" + simpleClassName + ") ---");
+                System.out.println(result.stdout());
+            }
+
+            if (!result.stderr().isBlank()) {
+                System.err.println("      --- Test Errors (" + simpleClassName + ") ---");
+                System.err.println(result.stderr());
+            }
+
+            if (Files.exists(testExecFile)) {
+                System.out.println("      Coverage for " + simpleClassName + " completed (exit code: " + result.exitCode() + ")");
+                execFiles.add(testExecFile);
+            } else {
+                System.err.println("      WARNING: jacoco.exec file was not generated for " + className);
+            }
         }
-
-        if (Files.exists(execFile)) {
-            System.out.println("      Coverage execution completed (exit code: " + result.exitCode() + ")");
-            return execFile;
-        }
-
-        System.err.println("      ERROR: jacoco.exec file was not generated");
-        return null;
+        
+        System.out.println("      Total coverage files generated: " + execFiles.size());
+        return execFiles;
     }
 
     /**
@@ -88,7 +146,6 @@ public class CoverageRunner {
      */
     private void setupTempDirectory() throws IOException {
         tempDir = Files.createTempDirectory("javelin-coverage-");
-        execFile = tempDir.resolve("jacoco.exec");
         
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
@@ -208,22 +265,27 @@ public class CoverageRunner {
     }
 
     /**
-     * builds the Java arguments for running the test suite with jacoco instrumentation
+     * builds the Java arguments for running a specific test class with jacoco instrumentation
+     *
+     * @param classpath the classpath string
+     * @param testExecFile the unique exec file path for this test class
+     * @param testClassName the fully qualified test class name to run
+     * @return list of Java arguments
      */
-    private List<String> buildJavaArgs(String classpath) {
+    private List<String> buildJavaArgsForTest(String classpath, Path testExecFile, String testClassName) {
         List<String> args = new ArrayList<>();
 
         String jacocoAgent = String.format(
                 "-javaagent:%s=destfile=%s,includes=*,excludes=org.junit.*:org.jacoco.*",//agent config
                 jacocoAgentJar.toAbsolutePath(),
-                execFile.toAbsolutePath()
+                testExecFile.toAbsolutePath()
         );
         args.add(jacocoAgent);
         args.add("-cp");
         args.add(classpath);
         args.add("org.junit.platform.console.ConsoleLauncher");
-        args.add("--scan-classpath");
-        args.add(testPath.toAbsolutePath().toString());
+        args.add("--select-class");
+        args.add(testClassName);
         args.add("--include-engine=junit-jupiter");
         args.add("--include-engine=junit-vintage");
         args.add("--disable-ansi-colors");
@@ -232,9 +294,9 @@ public class CoverageRunner {
     }
 
     /**
-     * returns path to the generated exec file (for testing)
+     * returns path to the temp directory (for testing)
      */
-    public Path getExecFilePath() {
-        return execFile;
+    public Path getTempDir() {
+        return tempDir;
     }
 }

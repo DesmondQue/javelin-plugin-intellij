@@ -94,18 +94,22 @@ public class Main implements Callable<Integer> {
         //step 2: run tests with JaCoCo coverage
         System.out.printf("[2/5] Running tests with coverage instrumentation...%n");
         CoverageRunner coverageRunner = new CoverageRunner(targetPath, testPath, additionalClasspath);
-        Path execFile = coverageRunner.run();
+        List<Path> execFiles = coverageRunner.run();
         
-        if (execFile == null || !Files.exists(execFile)) {
-            System.err.printf("ERROR: Coverage execution failed. No .exec file generated.%n");
+        if (execFiles == null || execFiles.isEmpty()) {
+            System.err.printf("ERROR: Coverage execution failed. No .exec files generated.%n");
             return 1;
         }
-        System.out.printf("      Coverage data written to: %s%n%n", execFile);
+        System.out.printf("      Generated %d coverage file(s)%n", execFiles.size());
+        for (Path execFile : execFiles) {
+            System.out.printf("        - %s%n", execFile.getFileName());
+        }
+        System.out.println();
 
-        //step 3: parse JaCoCo execution data
+        //step 3: parse JaCoCo execution data (per-test coverage)
         System.out.printf("[3/5] Parsing coverage data...%n");
         DataParser dataParser = new DataParser();
-        CoverageData coverageData = dataParser.parse(execFile, targetPath);
+        CoverageData coverageData = dataParser.parseMultiple(execFiles, targetPath);
         
         printCoverageSummary(coverageData);
 
