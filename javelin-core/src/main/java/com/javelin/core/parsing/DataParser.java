@@ -168,24 +168,24 @@ public class DataParser {
     }
 
     /**
-     * parses multiple JaCoCo execution data files (one per test class) and builds
-     * true per-test coverage data
+     * Parses multiple JaCoCo execution data files (one per test class) and builds
+     * true per-test coverage data. This enables accurate SBFL analysis.
      *
-     * @param execFiles  list of paths to jacoco-<ClassName>.exec files
-     * @param classesDir path to the directory containing the compiled .class files
+     * @param testExecResults list of TestExecResult containing exec files and pass/fail status
+     * @param classesDir      path to the directory containing the compiled .class files
      * @return CoverageData containing per-test coverage information
      * @throws IOException if any file cannot be read
      */
-    public CoverageData parseMultiple(List<Path> execFiles, Path classesDir) throws IOException {
+    public CoverageData parseMultiple(List<com.javelin.core.model.TestExecResult> testExecResults, 
+                                       Path classesDir) throws IOException {
         Map<String, TestResult> testResults = new HashMap<>();
         Map<String, Map<String, Set<Integer>>> coveragePerTest = new HashMap<>();
         Set<LineCoverage> allLineCoverage = new HashSet<>();
 
-        for (Path execFile : execFiles) {
-            String fileName = execFile.getFileName().toString();
-            String testClassName = fileName
-                    .replace("jacoco-", "")
-                    .replace(".exec", "");
+        for (com.javelin.core.model.TestExecResult testExecResult : testExecResults) {
+            Path execFile = testExecResult.execFile();
+            String testClassName = testExecResult.testClassName();
+            boolean passed = testExecResult.passed();
 
             ExecutionDataStore executionDataStore = new ExecutionDataStore();
             SessionInfoStore sessionInfoStore = new SessionInfoStore();
@@ -234,9 +234,8 @@ public class DataParser {
             //add this test's coverage to the per-test map
             coveragePerTest.put(testClassName, testCoverage);
             
-            //create a test result - for now assume all passed
-            // TODO: integrate with JUnit execution to capture actual pass/fail status
-            testResults.put(testClassName, new TestResult(testClassName, true, null));
+            //create test result using actual pass/fail from JUnit exit code
+            testResults.put(testClassName, new TestResult(testClassName, passed, null));
         }
 
         return new CoverageData(testResults, coveragePerTest, allLineCoverage);

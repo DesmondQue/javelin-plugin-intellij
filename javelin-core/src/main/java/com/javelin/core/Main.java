@@ -11,6 +11,7 @@ import com.javelin.core.math.OchiaiCalculator;
 import com.javelin.core.model.CoverageData;
 import com.javelin.core.model.SpectrumMatrix;
 import com.javelin.core.model.SuspiciousnessResult;
+import com.javelin.core.model.TestExecResult;
 import com.javelin.core.parsing.DataParser;
 import com.javelin.core.parsing.MatrixBuilder;
 
@@ -94,22 +95,23 @@ public class Main implements Callable<Integer> {
         //step 2: run tests with JaCoCo coverage
         System.out.printf("[2/5] Running tests with coverage instrumentation...%n");
         CoverageRunner coverageRunner = new CoverageRunner(targetPath, testPath, additionalClasspath);
-        List<Path> execFiles = coverageRunner.run();
+        List<TestExecResult> testExecResults = coverageRunner.run();
         
-        if (execFiles == null || execFiles.isEmpty()) {
+        if (testExecResults == null || testExecResults.isEmpty()) {
             System.err.printf("ERROR: Coverage execution failed. No .exec files generated.%n");
             return 1;
         }
-        System.out.printf("      Generated %d coverage file(s)%n", execFiles.size());
-        for (Path execFile : execFiles) {
-            System.out.printf("        - %s%n", execFile.getFileName());
+        System.out.printf("      Generated %d coverage file(s):%n", testExecResults.size());
+        for (TestExecResult execResult : testExecResults) {
+            String status = execResult.passed() ? "PASSED" : "FAILED";
+            System.out.printf("        - %s [%s]%n", execResult.execFile().getFileName(), status);
         }
         System.out.println();
 
         //step 3: parse JaCoCo execution data (per-test coverage)
         System.out.printf("[3/5] Parsing coverage data...%n");
         DataParser dataParser = new DataParser();
-        CoverageData coverageData = dataParser.parseMultiple(execFiles, targetPath);
+        CoverageData coverageData = dataParser.parseMultiple(testExecResults, targetPath);
         
         printCoverageSummary(coverageData);
 

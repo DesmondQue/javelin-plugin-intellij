@@ -8,8 +8,13 @@ version = "1.0.0-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(22))
     }
+}
+
+tasks.withType<JavaCompile> {
+    options.release.set(17)  // Generate Java 17 compatible bytecode
+    options.compilerArgs.add("-Xlint:deprecation")
 }
 
 repositories {
@@ -52,10 +57,6 @@ application {
     )
 }
 
-tasks.withType<JavaCompile> {
-    options.compilerArgs.add("-Xlint:deprecation")
-}
-
 tasks.test {
     useJUnitPlatform()
 }
@@ -82,6 +83,15 @@ tasks.register<Jar>("fatJar") {
             .filter { it.name.endsWith("jar") }
             .map { zipTree(it) }
     })
+    
+    // Include JaCoCo agent runtime JAR as jacocoagent.jar at root level
+    from({
+        configurations.runtimeClasspath.get()
+            .filter { it.name.contains("org.jacoco.agent") && it.name.contains("-runtime") }
+            .map { it }
+    }) {
+        rename { "jacocoagent.jar" }
+    }
     
     manifest {
         attributes(

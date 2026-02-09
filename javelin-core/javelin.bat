@@ -1,17 +1,21 @@
 @echo off
-@rem ensure Java 21 is used
+@rem Javelin requires Java 17 or higher
 setlocal
 
-@rem common locations
-if exist "C:\Program Files\Eclipse Adoptium\jdk-21.0.4.7-hotspot" (
-    set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.4.7-hotspot"
-) else if exist "C:\Program Files\Java\jdk-21" (
-    set "JAVA_HOME=C:\Program Files\Java\jdk-21"
-) else if exist "C:\Program Files\Eclipse Adoptium\jdk-21" (
-    set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21"
-) else (
-    set "JAVA_HOME="
-)
+@rem Check common Java installation locations (prefer newer versions)
+set "JAVA_HOME="
+
+@rem Check for Java 22
+for /d %%i in ("C:\Program Files\Java\jdk-22*") do set "JAVA_HOME=%%i"
+if not defined JAVA_HOME for /d %%i in ("C:\Program Files\Eclipse Adoptium\jdk-22*") do set "JAVA_HOME=%%i"
+
+@rem Check for Java 21
+if not defined JAVA_HOME for /d %%i in ("C:\Program Files\Java\jdk-21*") do set "JAVA_HOME=%%i"
+if not defined JAVA_HOME for /d %%i in ("C:\Program Files\Eclipse Adoptium\jdk-21*") do set "JAVA_HOME=%%i"
+
+@rem Check for Java 17
+if not defined JAVA_HOME for /d %%i in ("C:\Program Files\Java\jdk-17*") do set "JAVA_HOME=%%i"
+if not defined JAVA_HOME for /d %%i in ("C:\Program Files\Eclipse Adoptium\jdk-17*") do set "JAVA_HOME=%%i"
 
 call "%~dp0build\install\javelin\bin\javelin.bat" %*
 
