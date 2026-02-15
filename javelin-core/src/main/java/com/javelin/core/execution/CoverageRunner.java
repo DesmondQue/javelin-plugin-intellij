@@ -13,6 +13,11 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.jar.JarFile;
 
 import org.objectweb.asm.AnnotationVisitor;
@@ -43,15 +48,21 @@ public class CoverageRunner {
     private final Path testPath;
     private final String additionalClasspath;
     private final ProcessExecutor processExecutor;
+    private final int threadCount;
 
     private Path tempDir;
     private Path jacocoAgentJar;
 
     public CoverageRunner(Path targetPath, Path testPath, String additionalClasspath) {
+        this(targetPath, testPath, additionalClasspath, Runtime.getRuntime().availableProcessors());
+    }
+
+    public CoverageRunner(Path targetPath, Path testPath, String additionalClasspath, int threadCount) {
         this.targetPath = targetPath;
         this.testPath = testPath;
         this.additionalClasspath = additionalClasspath;
         this.processExecutor = new ProcessExecutor();
+        this.threadCount = Math.max(1, threadCount);
     }
 
     /**
@@ -96,13 +107,10 @@ public class CoverageRunner {
      */
     private List<String> findTestMethods(Path testDir, String className) throws IOException {
         List<String> testMethods = new ArrayList<>();
-        
-        // Convert class name to file path
         String classFilePath = className.replace('.', java.io.File.separatorChar) + ".class";
         Path classFile = testDir.resolve(classFilePath);
         
         if (!Files.exists(classFile)) {
-            // Try without package (for default package classes)
             classFile = testDir.resolve(className + ".class");
         }
         
@@ -122,7 +130,6 @@ public class CoverageRunner {
                     return new MethodVisitor(Opcodes.ASM9) {
                         @Override
                         public AnnotationVisitor visitAnnotation(String annotationDescriptor, boolean visible) {
-                            // Check for JUnit 5 @Test or JUnit 4 @Test
                             if (annotationDescriptor.equals("Lorg/junit/jupiter/api/Test;") ||
                                 annotationDescriptor.equals("Lorg/junit/Test;")) {
                                 testMethods.add(name);
@@ -139,7 +146,7 @@ public class CoverageRunner {
 
     /**
      * runs all tests with JaCoCo coverage instrumentation, executing each test METHOD
-     * in its own separate JVM process to enable accurate per-test coverage collection.
+     * in its own separate JVM process to enable accurate per-test coverage collection
      *
      * @return List of TestExecResult containing coverage files and pass/fail status
      * @throws IOException if temp files cannot be created
@@ -158,8 +165,7 @@ public class CoverageRunner {
             return new ArrayList<>();
         }
         
-        // Discover all test methods across all classes
-        List<String[]> allTestMethods = new ArrayList<>(); // [className, methodName]
+        List<String[]> allTestMethods = new ArrayList<>(); //[className, methodName]
         for (String className : testClasses) {
             List<String> methods = findTestMethods(testPath, className);
             for (String method : methods) {
@@ -175,49 +181,80 @@ public class CoverageRunner {
             return new ArrayList<>();
         }
         
-        List<TestExecResult> results = new ArrayList<>();
+        int effectiveThreads = Math.min(threadCount, allTestMethods.size());
+        System.out.println("      Executing with " + effectiveThreads + " thread(s)...");
         
-        // Execute each test METHOD in its own JVM process
-        for (String[] testMethod : allTestMethods) {
-            String className = testMethod[0];
-            String methodName = testMethod[1];
-            String simpleClassName = className.contains(".") 
-                    ? className.substring(className.lastIndexOf('.') + 1) 
-                    : className;
-            
-            // Generate unique exec file path for this test method
-            String testId = simpleClassName + "#" + methodName;
-            Path testExecFile = tempDir.resolve("jacoco-" + simpleClassName + "-" + methodName + ".exec");
-            
-            System.out.println("      Running test: " + testId);
-            
-            List<String> javaArgs = buildJavaArgsForTestMethod(classpath, testExecFile, className, methodName);
-            
-            ProcessExecutor.ExecutionResult result = processExecutor.executeJava(
-                    javaArgs, 
-                    tempDir, 
-                    null
-            );
-
-            // Only show output if there's something relevant (failures or errors)
-            if (result.exitCode() != 0 && !result.stdout().isBlank()) {
-                System.out.println("      --- Test Output (" + testId + ") ---");
-                System.out.println(result.stdout());
+        List<TestExecResult> results = new ArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(effectiveThreads);
+        
+        try {
+            List<Future<TestExecTaskResult>> futures = new ArrayList<>();
+            for (String[] testMethod : allTestMethods) {
+                String className = testMethod[0];
+                String methodName = testMethod[1];
+                String simpleClassName = className.contains(".") 
+                        ? className.substring(className.lastIndexOf('.') + 1) 
+                        : className;
+                
+                String testId = simpleClassName + "#" + methodName;
+                Path testExecFile = tempDir.resolve("jacoco-" + simpleClassName + "-" + methodName + ".exec");
+                
+                List<String> javaArgs = buildJavaArgsForTestMethod(classpath, testExecFile, className, methodName);
+                
+                futures.add(executor.submit(() -> {
+                    ProcessExecutor.ExecutionResult result = new ProcessExecutor().executeJava(
+                            javaArgs, 
+                            tempDir, 
+                            null
+                    );
+                    return new TestExecTaskResult(testId, testExecFile, result);
+                }));
             }
-
-            if (!result.stderr().isBlank() && !result.stderr().contains("WARNING: Delegated")) {
-                System.err.println("      --- Test Errors (" + testId + ") ---");
-                System.err.println(result.stderr());
+            
+            for (Future<TestExecTaskResult> future : futures) {
+                try {
+                    TestExecTaskResult taskResult = future.get();
+                    String testId = taskResult.testId;
+                    Path testExecFile = taskResult.execFile;
+                    ProcessExecutor.ExecutionResult result = taskResult.result;
+                    
+                    StringBuilder output = new StringBuilder();
+                    output.append("      Running test: ").append(testId).append(System.lineSeparator());
+                    
+                    if (result.exitCode() != 0 && !result.stdout().isBlank()) {
+                        output.append("      --- Test Output (").append(testId).append(") ---")
+                              .append(System.lineSeparator());
+                        output.append(result.stdout());
+                    }
+                    
+                    if (!result.stderr().isBlank() && !result.stderr().contains("WARNING: Delegated")) {
+                        output.append("      --- Test Errors (").append(testId).append(") ---")
+                              .append(System.lineSeparator());
+                        output.append(result.stderr());
+                    }
+                    
+                    if (Files.exists(testExecFile)) {
+                        boolean passed = result.exitCode() == 0;
+                        String status = passed ? "PASSED" : "FAILED";
+                        output.append("        ").append(testId).append(": ").append(status)
+                              .append(System.lineSeparator());
+                        results.add(TestExecResult.fromExitCode(testId, testExecFile, result.exitCode()));
+                    } else {
+                        output.append("      WARNING: jacoco.exec file was not generated for ")
+                              .append(testId).append(System.lineSeparator());
+                    }
+                    
+                    System.out.print(output);
+                } catch (ExecutionException e) {
+                    System.out.println("      ERROR: Test execution failed: " + e.getCause().getMessage());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    System.out.println("      ERROR: Test execution interrupted");
+                    break;
+                }
             }
-
-            if (Files.exists(testExecFile)) {
-                boolean passed = result.exitCode() == 0;
-                String status = passed ? "PASSED" : "FAILED";
-                System.out.println("        " + testId + ": " + status);
-                results.add(TestExecResult.fromExitCode(testId, testExecFile, result.exitCode()));
-            } else {
-                System.err.println("      WARNING: jacoco.exec file was not generated for " + testId);
-            }
+        } finally {
+            executor.shutdown();
         }
         
         long passedCount = results.stream().filter(TestExecResult::passed).count();
@@ -430,4 +467,13 @@ public class CoverageRunner {
     public Path getTempDir() {
         return tempDir;
     }
+
+    /**
+     * holds the result of a single parallel test execution task
+     */
+    private record TestExecTaskResult(
+            String testId,
+            Path execFile,
+            ProcessExecutor.ExecutionResult result
+    ) {}
 }

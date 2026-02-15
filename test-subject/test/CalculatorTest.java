@@ -5,14 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for Calculator class.
+ * Tests for Calculator class. 19 TEST CASES TOTAL
  * 
  * EXPECTED FAILURES (will expose bugs):
  *   - testSubtract: expects 2, gets 8 (BUG #1)
  *   - testDivideByZero: expects exception, gets 0 (BUG #2)
  *   - testModulo: expects 1, gets 3 (BUG #3)
- *   - testPower: expects 8, gets 16 (BUG #4)
- *   - testAbsoluteNegative: expects 5, gets -5 (BUG #5)
+ *   - testAbsoluteNegative: expects 5, gets -5 (BUG #4)
  */
 public class CalculatorTest {
     
@@ -116,14 +115,12 @@ public class CalculatorTest {
     
     @Test
     public void testPower() {
-        // WILL FAIL: BUG #4 - off-by-one, result is doubled
-        // Expected: 2^3 = 8, Actual: 16 (loops 4 times instead of 3)
         assertEquals(8, calc.power(2, 3));
     }
     
     @Test
     public void testAbsoluteNegative() {
-        // WILL FAIL: BUG #5 - doesn't negate negative numbers
+        // WILL FAIL: BUG #4 - doesn't negate negative numbers
         // Expected: |-5| = 5, Actual: -5
         assertEquals(5, calc.absolute(-5));
     }

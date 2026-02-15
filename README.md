@@ -13,7 +13,8 @@ Automated Spectrum-Based Fault Localization (SBFL) for Java using the Ochiai alg
 ## Quick Start
 
 ### Prerequisites
-- Java 21+ (JDK)
+- Java (JDK) 21, 22 ~Tested
+- Java (JDK) 17 ~Untested
 - Gradle 8.5+ (or use included wrapper)
 
 ### Build Javelin

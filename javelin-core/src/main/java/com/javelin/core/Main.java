@@ -72,6 +72,10 @@ public class Main implements Callable<Integer> {
             description = "Additional classpath")
     private String additionalClasspath;
 
+    @Option(names = {"-j", "--threads"}, required = false, paramLabel = "<count>", order = 6,
+            description = "Number of parallel threads for test execution (default: CPU core count)")
+    private int threadCount = Runtime.getRuntime().availableProcessors();
+
     public static void main(String[] args) {
         CommandLine cmd = new CommandLine(new Main());
         cmd.setUsageHelpWidth(300);
@@ -94,8 +98,10 @@ public class Main implements Callable<Integer> {
 
         //step 2: run tests with JaCoCo coverage
         System.out.printf("[2/5] Running tests with coverage instrumentation...%n");
-        CoverageRunner coverageRunner = new CoverageRunner(targetPath, testPath, additionalClasspath);
+        long testExecStart = System.nanoTime();
+        CoverageRunner coverageRunner = new CoverageRunner(targetPath, testPath, additionalClasspath, threadCount);
         List<TestExecResult> testExecResults = coverageRunner.run();
+        long testExecTimeMs = (System.nanoTime() - testExecStart) / 1_000_000;
         
         if (testExecResults == null || testExecResults.isEmpty()) {
             System.err.printf("ERROR: Coverage execution failed. No .exec files generated.%n");
@@ -117,11 +123,13 @@ public class Main implements Callable<Integer> {
 
         //step 4: build spectrum hit matrix and calculate Ochiai scores
         System.out.printf("[4/5] Building spectrum hit matrix and calculating scores...%n");
+        long ochiaiStart = System.nanoTime();
         MatrixBuilder matrixBuilder = new MatrixBuilder();
         SpectrumMatrix matrix = matrixBuilder.build(coverageData);
 
         OchiaiCalculator calculator = new OchiaiCalculator();
         List<SuspiciousnessResult> results = calculator.calculate(matrix);
+        long ochiaiTimeMs = (System.nanoTime() - ochiaiStart) / 1_000_000;
         System.out.printf("      Calculated suspiciousness for %d line(s).%n%n", results.size());
 
         //step 5: export to CSV
@@ -131,6 +139,7 @@ public class Main implements Callable<Integer> {
         System.out.printf("      Report saved to: %s%n%n", outputPath.toAbsolutePath());
 
         printResultsSummary(results);
+        printTimingSummary(testExecTimeMs, ochiaiTimeMs);
 
         return 0;
     }
@@ -190,6 +199,21 @@ public class Main implements Callable<Integer> {
                     result.score());
         }
         System.out.printf("+------+--------------------------------------------+------+------------+%n");
+    }
+
+    //timing summary
+    private void printTimingSummary(long testExecTimeMs, long ochiaiTimeMs) {
+        System.out.printf("%nTiming:%n");
+        System.out.printf("  Test execution:      %s%n", formatDuration(testExecTimeMs));
+        System.out.printf("  Ochiai calculation:  %s%n", formatDuration(ochiaiTimeMs));
+        System.out.printf("  Total:               %s%n", formatDuration(testExecTimeMs + ochiaiTimeMs));
+    }
+
+    private String formatDuration(long ms) {
+        if (ms < 1000) {
+            return ms + "ms";
+        }
+        return String.format("%.2fs", ms / 1000.0);
     }
 
     //truncates a string to fit a specified width
