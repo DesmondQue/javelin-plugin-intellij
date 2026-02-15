@@ -13,7 +13,7 @@ java {
 }
 
 tasks.withType<JavaCompile> {
-    options.release.set(17)  // Generate Java 17 compatible bytecode
+    options.release.set(17)  //generate Java 17 compatible bytecode
     options.compilerArgs.add("-Xlint:deprecation")
 }
 
@@ -57,8 +57,37 @@ application {
     )
 }
 
+val jacocoAgentJar by configurations.creating {
+    isTransitive = false
+}
+
+dependencies {
+    jacocoAgentJar("org.jacoco:org.jacoco.agent:0.8.12:runtime")
+}
+
+val extractJacocoAgent by tasks.registering(Copy::class) {
+    from(jacocoAgentJar)
+    into(layout.buildDirectory.dir("jacoco-agent"))
+    rename { "jacocoagent.jar" }
+}
+
 tasks.test {
     useJUnitPlatform()
+    //allows the listener to access the agent via RT.getAgent()
+    dependsOn(extractJacocoAgent)
+    
+    val agentJar = layout.buildDirectory.file("jacoco-agent/jacocoagent.jar")
+    val execFile = layout.buildDirectory.file("jacoco/test.exec")
+    
+    doFirst {
+        jvmArgs(
+            "-javaagent:${agentJar.get().asFile.absolutePath}=" +
+                "destfile=${execFile.get().asFile.absolutePath}," +
+                "includes=*," +
+                "excludes=org.junit.*:org.jacoco.*"
+        )
+    }
+    systemProperty("junit.jupiter.extensions.autodetection.enabled", "true")
 }
 
 tasks.jar {
@@ -84,7 +113,6 @@ tasks.register<Jar>("fatJar") {
             .map { zipTree(it) }
     })
     
-    // Include JaCoCo agent runtime JAR as jacocoagent.jar at root level
     from({
         configurations.runtimeClasspath.get()
             .filter { it.name.contains("org.jacoco.agent") && it.name.contains("-runtime") }

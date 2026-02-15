@@ -13,11 +13,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.Map;
 import java.util.jar.JarFile;
 
 import org.objectweb.asm.AnnotationVisitor;
@@ -48,21 +44,24 @@ public class CoverageRunner {
     private final Path testPath;
     private final String additionalClasspath;
     private final ProcessExecutor processExecutor;
-    private final int threadCount;
 
     private Path tempDir;
     private Path jacocoAgentJar;
 
     public CoverageRunner(Path targetPath, Path testPath, String additionalClasspath) {
-        this(targetPath, testPath, additionalClasspath, Runtime.getRuntime().availableProcessors());
-    }
-
-    public CoverageRunner(Path targetPath, Path testPath, String additionalClasspath, int threadCount) {
         this.targetPath = targetPath;
         this.testPath = testPath;
         this.additionalClasspath = additionalClasspath;
         this.processExecutor = new ProcessExecutor();
-        this.threadCount = Math.max(1, threadCount);
+    }
+
+    /**
+     * @deprecated threadCount is no longer used since all tests run in a single JVM.
+     *             Use {@link #CoverageRunner(Path, Path, String)} instead.
+     */
+    @Deprecated
+    public CoverageRunner(Path targetPath, Path testPath, String additionalClasspath, int threadCount) {
+        this(targetPath, testPath, additionalClasspath);
     }
 
     /**
@@ -145,8 +144,11 @@ public class CoverageRunner {
     }
 
     /**
-     * runs all tests with JaCoCo coverage instrumentation, executing each test METHOD
-     * in its own separate JVM process to enable accurate per-test coverage collection
+     * Runs all tests with JaCoCo coverage instrumentation in a SINGLE JVM process.
+     * Uses JavelinTestListener to capture per-test coverage data via JaCoCo Runtime API.
+     * 
+     * This is significantly faster than the previous approach of forking a new JVM per test,
+     * following the GZoltar approach of in-process coverage collection.
      *
      * @return List of TestExecResult containing coverage files and pass/fail status
      * @throws IOException if temp files cannot be created
@@ -165,101 +167,132 @@ public class CoverageRunner {
             return new ArrayList<>();
         }
         
-        List<String[]> allTestMethods = new ArrayList<>(); //[className, methodName]
+        // Build list of fully qualified test method specifiers
+        List<String> testSpecifiers = new ArrayList<>();
         for (String className : testClasses) {
             List<String> methods = findTestMethods(testPath, className);
             for (String method : methods) {
-                allTestMethods.add(new String[]{className, method});
+                testSpecifiers.add(className + "#" + method);
             }
         }
         
         System.out.println("      Found " + testClasses.size() + " test class(es) with " 
-                + allTestMethods.size() + " test method(s)");
+                + testSpecifiers.size() + " test method(s)");
         
-        if (allTestMethods.isEmpty()) {
+        if (testSpecifiers.isEmpty()) {
             System.err.println("      WARNING: No test methods found");
             return new ArrayList<>();
         }
         
-        int effectiveThreads = Math.min(threadCount, allTestMethods.size());
-        System.out.println("      Executing with " + effectiveThreads + " thread(s)...");
+        System.out.println("      Executing all tests in single JVM fork...");
         
-        List<TestExecResult> results = new ArrayList<>();
-        ExecutorService executor = Executors.newFixedThreadPool(effectiveThreads);
+        // Build arguments for SingleJvmTestRunner
+        List<String> javaArgs = buildSingleJvmRunnerArgs(classpath, testSpecifiers);
         
-        try {
-            List<Future<TestExecTaskResult>> futures = new ArrayList<>();
-            for (String[] testMethod : allTestMethods) {
-                String className = testMethod[0];
-                String methodName = testMethod[1];
-                String simpleClassName = className.contains(".") 
-                        ? className.substring(className.lastIndexOf('.') + 1) 
-                        : className;
-                
-                String testId = simpleClassName + "#" + methodName;
-                Path testExecFile = tempDir.resolve("jacoco-" + simpleClassName + "-" + methodName + ".exec");
-                
-                List<String> javaArgs = buildJavaArgsForTestMethod(classpath, testExecFile, className, methodName);
-                
-                futures.add(executor.submit(() -> {
-                    ProcessExecutor.ExecutionResult result = new ProcessExecutor().executeJava(
-                            javaArgs, 
-                            tempDir, 
-                            null
-                    );
-                    return new TestExecTaskResult(testId, testExecFile, result);
-                }));
-            }
-            
-            for (Future<TestExecTaskResult> future : futures) {
-                try {
-                    TestExecTaskResult taskResult = future.get();
-                    String testId = taskResult.testId;
-                    Path testExecFile = taskResult.execFile;
-                    ProcessExecutor.ExecutionResult result = taskResult.result;
-                    
-                    StringBuilder output = new StringBuilder();
-                    output.append("      Running test: ").append(testId).append(System.lineSeparator());
-                    
-                    if (result.exitCode() != 0 && !result.stdout().isBlank()) {
-                        output.append("      --- Test Output (").append(testId).append(") ---")
-                              .append(System.lineSeparator());
-                        output.append(result.stdout());
-                    }
-                    
-                    if (!result.stderr().isBlank() && !result.stderr().contains("WARNING: Delegated")) {
-                        output.append("      --- Test Errors (").append(testId).append(") ---")
-                              .append(System.lineSeparator());
-                        output.append(result.stderr());
-                    }
-                    
-                    if (Files.exists(testExecFile)) {
-                        boolean passed = result.exitCode() == 0;
-                        String status = passed ? "PASSED" : "FAILED";
-                        output.append("        ").append(testId).append(": ").append(status)
-                              .append(System.lineSeparator());
-                        results.add(TestExecResult.fromExitCode(testId, testExecFile, result.exitCode()));
-                    } else {
-                        output.append("      WARNING: jacoco.exec file was not generated for ")
-                              .append(testId).append(System.lineSeparator());
-                    }
-                    
-                    System.out.print(output);
-                } catch (ExecutionException e) {
-                    System.out.println("      ERROR: Test execution failed: " + e.getCause().getMessage());
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    System.out.println("      ERROR: Test execution interrupted");
-                    break;
-                }
-            }
-        } finally {
-            executor.shutdown();
+        // Execute single JVM process with all tests
+        ProcessExecutor.ExecutionResult result = processExecutor.executeJava(
+                javaArgs, 
+                tempDir, 
+                null,
+                600 // 10 minute timeout for all tests
+        );
+        
+        // Print output
+        if (!result.stdout().isBlank()) {
+            System.out.println(result.stdout());
         }
+        if (!result.stderr().isBlank() && !result.stderr().contains("WARNING: Delegated")) {
+            System.err.println(result.stderr());
+        }
+        
+        // Collect results from output directory
+        List<TestExecResult> results = collectResults(testSpecifiers);
         
         long passedCount = results.stream().filter(TestExecResult::passed).count();
         long failedCount = results.size() - passedCount;
         System.out.println("      Total: " + results.size() + " test(s) - " + passedCount + " passed, " + failedCount + " failed");
+        
+        return results;
+    }
+
+    /**
+     * Builds Java arguments for the SingleJvmTestRunner.
+     */
+    private List<String> buildSingleJvmRunnerArgs(String classpath, List<String> testSpecifiers) {
+        List<String> args = new ArrayList<>();
+
+        // JaCoCo agent - note: coverage is collected per-test via JavelinTestListener
+        // The agent destfile is not used directly; per-test .exec files are written by the listener
+        String jacocoAgent = String.format(
+                "-javaagent:%s=destfile=%s,includes=*,excludes=org.junit.*:org.jacoco.*",
+                jacocoAgentJar.toAbsolutePath(),
+                tempDir.resolve("jacoco-all.exec").toAbsolutePath()
+        );
+        args.add(jacocoAgent);
+        
+        args.add("-cp");
+        args.add(classpath);
+        
+        // Main class: SingleJvmTestRunner
+        args.add("com.javelin.core.execution.SingleJvmTestRunner");
+        
+        // Output directory argument
+        args.add("--output");
+        args.add(tempDir.toAbsolutePath().toString());
+        
+        // Test specifiers
+        args.add("--tests");
+        args.addAll(testSpecifiers);
+
+        return args;
+    }
+
+    /**
+     * Collects test results and maps them to TestExecResult objects.
+     */
+    private List<TestExecResult> collectResults(List<String> testSpecifiers) {
+        List<TestExecResult> results = new ArrayList<>();
+        
+        // Try to read the serialized results file
+        Map<String, Boolean> testResults = null;
+        try {
+            testResults = SingleJvmTestRunner.readResultsFile(tempDir);
+        } catch (Exception e) {
+            System.err.println("      WARNING: Could not read test results file: " + e.getMessage());
+        }
+        
+        for (String specifier : testSpecifiers) {
+            // Parse className#methodName
+            String[] parts = specifier.split("#");
+            String className = parts[0];
+            String methodName = parts.length > 1 ? parts[1] : "";
+            
+            String simpleClassName = className.contains(".") 
+                    ? className.substring(className.lastIndexOf('.') + 1) 
+                    : className;
+            String testId = simpleClassName + "#" + methodName;
+            
+            // Find the corresponding .exec file
+            String safeFileName = testId.replace("#", "_").replace(".", "_");
+            Path execFile = tempDir.resolve("jacoco-" + safeFileName + ".exec");
+            
+            if (Files.exists(execFile)) {
+                boolean passed = testResults != null && testResults.getOrDefault(testId, false);
+                results.add(new TestExecResult(testId, execFile, passed, passed ? 0 : 1));
+                System.out.println("        " + testId + ": " + (passed ? "PASSED" : "FAILED"));
+            } else {
+                // Try alternate naming patterns
+                Path altExecFile = tempDir.resolve("jacoco-" + simpleClassName + "_" + methodName + ".exec");
+                if (Files.exists(altExecFile)) {
+                    boolean passed = testResults != null && testResults.getOrDefault(testId, false);
+                    results.add(new TestExecResult(testId, altExecFile, passed, passed ? 0 : 1));
+                    System.out.println("        " + testId + ": " + (passed ? "PASSED" : "FAILED"));
+                } else {
+                    System.err.println("      WARNING: No coverage file found for " + testId);
+                }
+            }
+        }
+        
         return results;
     }
 
@@ -402,78 +435,9 @@ public class CoverageRunner {
     }
 
     /**
-     * builds the Java arguments for running a specific test class with jacoco instrumentation
-     *
-     * @param classpath the classpath string
-     * @param testExecFile the unique exec file path for this test class
-     * @param testClassName the fully qualified test class name to run
-     * @return list of Java arguments
-     */
-    private List<String> buildJavaArgsForTest(String classpath, Path testExecFile, String testClassName) {
-        List<String> args = new ArrayList<>();
-
-        String jacocoAgent = String.format(
-                "-javaagent:%s=destfile=%s,includes=*,excludes=org.junit.*:org.jacoco.*",//agent config
-                jacocoAgentJar.toAbsolutePath(),
-                testExecFile.toAbsolutePath()
-        );
-        args.add(jacocoAgent);
-        args.add("-cp");
-        args.add(classpath);
-        args.add("org.junit.platform.console.ConsoleLauncher");
-        args.add("--select-class");
-        args.add(testClassName);
-        args.add("--include-engine=junit-jupiter");
-        args.add("--include-engine=junit-vintage");
-        args.add("--disable-ansi-colors");
-
-        return args;
-    }
-
-    /**
-     * builds the Java arguments for running a specific test METHOD with jacoco instrumentation
-     *
-     * @param classpath      the classpath string
-     * @param testExecFile   the unique exec file path for this test method
-     * @param testClassName  the fully qualified test class name
-     * @param testMethodName the test method name
-     * @return list of Java arguments
-     */
-    private List<String> buildJavaArgsForTestMethod(String classpath, Path testExecFile, 
-                                                     String testClassName, String testMethodName) {
-        List<String> args = new ArrayList<>();
-
-        String jacocoAgent = String.format(
-                "-javaagent:%s=destfile=%s,includes=*,excludes=org.junit.*:org.jacoco.*",//agent config
-                jacocoAgentJar.toAbsolutePath(),
-                testExecFile.toAbsolutePath()
-        );
-        args.add(jacocoAgent);
-        args.add("-cp");
-        args.add(classpath);
-        args.add("org.junit.platform.console.ConsoleLauncher");
-        args.add("--select-method");
-        args.add(testClassName + "#" + testMethodName);
-        args.add("--include-engine=junit-jupiter");
-        args.add("--include-engine=junit-vintage");
-        args.add("--disable-ansi-colors");
-
-        return args;
-    }
-
-    /**
      * returns path to the temp directory (for testing)
      */
     public Path getTempDir() {
         return tempDir;
     }
-
-    /**
-     * holds the result of a single parallel test execution task
-     */
-    private record TestExecTaskResult(
-            String testId,
-            Path execFile,
-            ProcessExecutor.ExecutionResult result
-    ) {}
 }
