@@ -50,6 +50,11 @@ From the `javelin-core` directory:
 - `-h, --help` - Show help message
 - `-V, --version` - Show version
 
+### SBFL Requirements
+
+- At least one failing test is required. If zero failing tests are detected, Javelin stops with an error.
+- Runs with zero passing tests are allowed, but the suspiciousness ranking may be less informative.
+
 ## Platform Notes
 
 ### Windows

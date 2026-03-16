@@ -14,6 +14,7 @@ import com.javelin.core.model.SuspiciousnessResult;
 import com.javelin.core.model.TestExecResult;
 import com.javelin.core.parsing.DataParser;
 import com.javelin.core.parsing.MatrixBuilder;
+import com.javelin.core.validation.SbflPreconditions;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -44,13 +45,25 @@ import picocli.CommandLine.Option;
     optionListHeading = "%nOptions:%n",
     footer = {
         "",
+        "Algorithms:",
+        "  ochiai      Standard Ochiai SBFL (default). Ranks lines by suspiciousness",
+        "              using pass/fail test spectrum data.",
+        "  ochiai-ms   Ochiai with Mutation Score weighting (NOT YET IMPLEMENTED).",
+        "              Will weight passing tests by their mutation-killing strength.",
+        "",
         "Examples:",
-        "  javelin -t build/classes/java/main -T build/classes/java/test -o report.csv",
-        "  javelin --target /path/to/classes --test /path/to/tests --output results.csv",
+        "  javelin -a ochiai -t build/classes/java/main -T build/classes/java/test -o report.csv",
+        "  javelin --algorithm ochiai-ms --target /path/to/classes --test /path/to/tests --output results.csv",
+        "",
+        "SBFL: requires >=1 failing test; 0 passing tests is allowed (lower ranking quality).",
         ""
     }
 )
 public class Main implements Callable<Integer> {
+
+    @Option(names = {"-a", "--algorithm"}, required = false, paramLabel = "<name>", order = 0,
+            description = "Fault localization algorithm: ochiai (default) or ochiai-ms")
+    private String algorithm = "ochiai";
 
     @Option(names = {"-t", "--target"}, required = true, paramLabel = "<dir>", order = 1,
             description = "Path to compiled classes")
@@ -89,6 +102,23 @@ public class Main implements Callable<Integer> {
         System.out.printf("|                          Javelin Core                           |%n");
         System.out.printf("+===============================================================+%n%n");
 
+        //step 0: validate algorithm selection
+        String algo = algorithm.toLowerCase().trim();
+        if (!algo.equals("ochiai") && !algo.equals("ochiai-ms")) {
+            System.err.printf("ERROR: Unknown algorithm '%s'. Valid options: ochiai, ochiai-ms%n", algorithm);
+            return 1;
+        }
+
+        if (algo.equals("ochiai-ms")) {
+            System.out.printf("  Algorithm: Ochiai-MS (Mutation Score weighted)%n%n");
+            System.out.printf("NOTE: Ochiai-MS is not yet implemented.%n");
+            System.out.printf("      This algorithm will be available in a future release.%n");
+            System.out.printf("      Please use '--algorithm ochiai' for standard SBFL analysis.%n");
+            return 0;
+        }
+
+        System.out.printf("  Algorithm: Ochiai SBFL%n%n");
+
         //step 1: validate input paths
         if (!validatePaths()) {
             return 1;
@@ -120,6 +150,18 @@ public class Main implements Callable<Integer> {
         CoverageData coverageData = dataParser.parseMultiple(testExecResults, targetPath);
         
         printCoverageSummary(coverageData);
+
+        SbflPreconditions.ValidationResult validation = SbflPreconditions.evaluate(
+                coverageData.getPassedCount(),
+                coverageData.getFailedCount()
+        );
+        if (!validation.canProceed()) {
+            System.err.printf("ERROR: %s%n", validation.message());
+            return 2;
+        }
+        if (validation.warning()) {
+            System.err.printf("WARNING: %s%n%n", validation.message());
+        }
 
         //step 4: build spectrum hit matrix and calculate Ochiai scores
         System.out.printf("[4/5] Building spectrum hit matrix and calculating scores...%n");

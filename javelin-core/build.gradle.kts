@@ -8,12 +8,12 @@ version = "1.0.0-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(22))
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
 tasks.withType<JavaCompile> {
-    options.release.set(17)  //generate Java 17 compatible bytecode
+    options.release.set(21)  //generate Java 21 compatible bytecode
     options.compilerArgs.add("-Xlint:deprecation")
 }
 
