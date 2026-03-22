@@ -101,6 +101,8 @@ tasks.jar {
 }
 
 tasks.register<Jar>("fatJar") {
+    archiveBaseName.set("javelin-core")
+    archiveVersion.set("")
     archiveClassifier.set("all")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     

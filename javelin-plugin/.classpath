@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="output" path="bin/default"/>
+	<classpathentry output="bin/main" kind="src" path="src/main/java">
+		<attributes>
+			<attribute name="gradle_scope" value="main"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry output="bin/main" kind="src" path="src/main/resources">
+		<attributes>
+			<attribute name="gradle_scope" value="main"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-17/"/>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/aether-dependency-resolver.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/debugger-memory-agent.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/java-frontback.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/java-impl.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/javac2.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jb-jdi.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jetbrains.kotlinx.metadata.jvm.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jgoodies-common.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jps-builders-6.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jps-builders.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jps-javac-extension.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jps-launcher.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jshell-frontend.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/jshell-protocol.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/maven-resolver-connector-basic.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/maven-resolver-transport-file.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/maven-resolver-transport-http.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/java/lib/sa-jdwp.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/platform-loader.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/util-8.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/util.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/app-client.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/util_rt.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/opentelemetry.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/app.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/product-client.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/modules.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/lib-client.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/stats.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/jps-model.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/external-system-rt.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/rd.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/bouncy-castle.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/protobuf.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/intellij-test-discovery.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/intellij-coverage-agent-1.0.744.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/forms_rt.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/lib.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/externalProcess-rt.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/groovy.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/annotations.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/grpc.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/idea_rt.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/jsch-agent.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/lib/trove.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/copyright/lib/copyright.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/platform-images/lib/platform-images.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/featuresTrainer/lib/featuresTrainer.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/vcs-git/lib/git4idea-rt.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/vcs-git/lib/vcs-git.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win/plugins/performanceTesting/lib/performanceTesting.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Mark Que/.gradle/caches/8.10/transforms/2989f3bf0b4e9b46823f350c43d3f96a/transformed/ideaIC-2024.1-win">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+</classpath>

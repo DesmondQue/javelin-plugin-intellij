@@ -1,0 +1,29 @@
+<idea-plugin>
+    <id>com.javelin.plugin</id>
+    <name>Javelin - Fault Localization</name>
+    <vendor>Javelin Team</vendor>
+
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="Javelin Notifications" displayType="BALLOON" isLogByDefault="true"/>
+        <configurationType implementation="com.javelin.plugin.config.JavelinRunConfigurationType"/>
+        <projectService serviceImplementation="com.javelin.plugin.service.JavelinService"/>
+        <projectService serviceImplementation="com.javelin.plugin.ui.JavelinHighlightProvider"/>
+        <toolWindow id="Javelin"
+                    anchor="bottom"
+                    factoryClass="com.javelin.plugin.ui.JavelinToolWindowFactory"/>
+        <codeInsight.lineMarkerProvider
+            language="JAVA"
+            implementationClass="com.javelin.plugin.ui.JavelinGutterIconProvider"/>
+    </extensions>
+
+    <actions>
+        <action id="Javelin.RunAnalysis"
+                class="com.javelin.plugin.actions.RunJavelinAction"
+                text="Run Javelin Analysis"
+                description="Run fault localization on the current project">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
