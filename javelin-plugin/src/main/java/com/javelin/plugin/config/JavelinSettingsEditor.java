@@ -10,6 +10,8 @@ import com.intellij.ui.components.JBTextField;
 
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -21,7 +23,8 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
     private final TextFieldWithBrowseButton testDirField = new TextFieldWithBrowseButton();
     private final ComboBox<String> algorithmCombo = new ComboBox<>(new String[]{"ochiai", "ochiai-ms"});
     private final JBTextField outputPathField = new JBTextField();
-    private final JBTextField threadsField = new JBTextField();
+    private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
+    private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
 
     public JavelinSettingsEditor() {
         FileChooserDescriptor targetDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
@@ -39,7 +42,7 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
         addRow("Test classes:", testDirField, row++);
         addRow("Algorithm:", algorithmCombo, row++);
         addRow("Output CSV (optional):", outputPathField, row++);
-        addRow("Threads:", threadsField, row);
+        addRow("Threads (default: " + maxThreads + " cores):", threadsSpinner, row);
     }
 
     @Override
@@ -48,7 +51,7 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
         testDirField.setText(configuration.getTestPath());
         algorithmCombo.setSelectedItem(configuration.getAlgorithm());
         outputPathField.setText(configuration.getOutputPath());
-        threadsField.setText(Integer.toString(configuration.getThreads()));
+        threadsSpinner.setValue(Math.max(1, Math.min(configuration.getThreads(), maxThreads)));
     }
 
     @Override
@@ -58,24 +61,12 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
         Object selected = algorithmCombo.getSelectedItem();
         configuration.setAlgorithm(selected == null ? "ochiai" : selected.toString());
         configuration.setOutputPath(outputPathField.getText().trim());
-        configuration.setThreads(parseThreads(threadsField.getText().trim()));
+        configuration.setThreads((int) threadsSpinner.getValue());
     }
 
     @Override
     protected JComponent createEditor() {
         return panel;
-    }
-
-    private int parseThreads(String text) {
-        if (text == null || text.isBlank()) {
-            return Runtime.getRuntime().availableProcessors();
-        }
-        try {
-            int parsed = Integer.parseInt(text);
-            return Math.max(1, parsed);
-        } catch (NumberFormatException ignored) {
-            return Runtime.getRuntime().availableProcessors();
-        }
     }
 
     private void addRow(String label, JComponent component, int row) {

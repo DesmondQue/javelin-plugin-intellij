@@ -10,6 +10,7 @@
         <configurationType implementation="com.javelin.plugin.config.JavelinRunConfigurationType"/>
         <projectService serviceImplementation="com.javelin.plugin.service.JavelinService"/>
         <projectService serviceImplementation="com.javelin.plugin.ui.JavelinHighlightProvider"/>
+        <statusBarWidgetFactory implementation="com.javelin.plugin.ui.JavelinStatusBarWidgetFactory" id="Javelin.Status"/>
         <toolWindow id="Javelin"
                     anchor="bottom"
                     factoryClass="com.javelin.plugin.ui.JavelinToolWindowFactory"/>
@@ -24,6 +25,13 @@
                 text="Run Javelin Analysis"
                 description="Run fault localization on the current project">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift J"/>
+        </action>
+        <action id="Javelin.ClearResults"
+                class="com.javelin.plugin.actions.ClearJavelinResultsAction"
+                text="Clear Javelin Results"
+                description="Clear highlights, gutter icons, stripe marks and result table">
+            <add-to-group group-id="ToolsMenu" anchor="after" relative-to-action="Javelin.RunAnalysis"/>
         </action>
     </actions>
 </idea-plugin>

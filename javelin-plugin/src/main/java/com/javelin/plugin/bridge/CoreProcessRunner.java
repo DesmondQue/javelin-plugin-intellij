@@ -12,6 +12,11 @@ import java.util.List;
 
 public final class CoreProcessRunner {
 
+    private static String jbrJavaPath() {
+        String jbrHome = System.getProperty("java.home");
+        return Path.of(jbrHome, "bin", "java").toString();
+    }
+
     public CoreProcessResult run(
             Path jarPath,
             String algorithm,
@@ -22,7 +27,7 @@ public final class CoreProcessRunner {
             int threads
     ) {
         List<String> command = new ArrayList<>();
-        command.add("java");
+        command.add(jbrJavaPath());
         command.add("-jar");
         command.add(jarPath.toString());
         command.add("-a");
@@ -58,7 +63,7 @@ public final class CoreProcessRunner {
     }
 
     public String detectJavaVersion() {
-        GeneralCommandLine cmd = new GeneralCommandLine("java", "-version");
+        GeneralCommandLine cmd = new GeneralCommandLine(jbrJavaPath(), "-version");
         cmd.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         cmd.withCharset(java.nio.charset.StandardCharsets.UTF_8);
 

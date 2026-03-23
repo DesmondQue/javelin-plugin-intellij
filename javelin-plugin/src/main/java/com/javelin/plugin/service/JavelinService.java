@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
 import com.intellij.ide.plugins.PluginManagerCore;
@@ -38,12 +39,20 @@ public final class JavelinService {
     private final CoreProcessRunner processRunner = new CoreProcessRunner();
     private final CsvResultParser csvParser = new CsvResultParser();
     private List<FaultLocalizationResult> lastResults = List.of();
+    private volatile long lastRunDurationNanos = -1L;
+    private volatile Integer cachedJavaMajor;
+    private volatile String cachedJavaVersionOutput;
 
     public JavelinService(Project project) {
         this.project = project;
     }
 
     public List<FaultLocalizationResult> runAnalysis(RunRequest request) throws IOException {
+        return runAnalysis(request, null);
+    }
+
+    public List<FaultLocalizationResult> runAnalysis(RunRequest request, Consumer<String> phaseCallback) throws IOException {
+        long start = System.nanoTime();
         ensureJava21OrWarn();
         validateInputPaths(request);
 
@@ -51,6 +60,10 @@ public final class JavelinService {
             ? Files.createTempFile("javelin-results-", ".csv")
             : request.outputPath();
         Path coreJar = resolveCoreJarPath();
+
+        if (phaseCallback != null) {
+            phaseCallback.accept("Javelin: Running " + request.algorithm() + " analysis...");
+        }
 
         CoreProcessResult processResult = processRunner.run(
                 coreJar,
@@ -72,8 +85,13 @@ public final class JavelinService {
             throw new IllegalStateException("javelin-core exited successfully but produced no CSV output.");
         }
 
+        if (phaseCallback != null) {
+            phaseCallback.accept("Javelin: Parsing results...");
+        }
+
         List<FaultLocalizationResult> parsed = csvParser.parse(outputPath);
         lastResults = Collections.unmodifiableList(new ArrayList<>(parsed));
+        lastRunDurationNanos = System.nanoTime() - start;
         project.getMessageBus().syncPublisher(JavelinResultsListener.TOPIC).resultsUpdated(lastResults);
         return lastResults;
     }
@@ -82,14 +100,49 @@ public final class JavelinService {
         return lastResults;
     }
 
+    public long getLastRunDurationNanos() {
+        return lastRunDurationNanos;
+    }
+
+    public void clearResults() {
+        lastResults = List.of();
+        lastRunDurationNanos = -1L;
+        project.getMessageBus().syncPublisher(JavelinResultsListener.TOPIC).resultsUpdated(lastResults);
+    }
+
+    public int getDetectedJavaMajor() {
+        ensureCachedJavaVersion();
+        return cachedJavaMajor == null ? -1 : cachedJavaMajor;
+    }
+
+    public String getDetectedJavaVersionOutput() {
+        ensureCachedJavaVersion();
+        return cachedJavaVersionOutput == null ? "" : cachedJavaVersionOutput;
+    }
+
+    public boolean isCoreJarAvailable() {
+        return findCoreJarPath(false) != null;
+    }
+
     private void ensureJava21OrWarn() {
-        String versionOutput = processRunner.detectJavaVersion();
-        int major = parseJavaMajor(versionOutput);
+        // javelin-core is launched using the IDE's bundled JBR (always 21+ for IntelliJ 2025.1).
+        // Verify the JBR version as a safety check.
+        ensureCachedJavaVersion();
+        int major = cachedJavaMajor == null ? -1 : cachedJavaMajor;
         if (major < 21) {
             throw new IllegalStateException(
-                    "Java 21+ is required to run javelin-core. Current java reports: " + versionOutput
+                    "The IDE's bundled Java runtime must be 21+ to run javelin-core. Detected: " + cachedJavaVersionOutput
             );
         }
+    }
+
+    private void ensureCachedJavaVersion() {
+        if (cachedJavaMajor != null && cachedJavaVersionOutput != null) {
+            return;
+        }
+        String versionOutput = processRunner.detectJavaVersion();
+        cachedJavaVersionOutput = versionOutput;
+        cachedJavaMajor = parseJavaMajor(versionOutput);
     }
 
     private int parseJavaMajor(String text) {
@@ -124,6 +177,15 @@ public final class JavelinService {
     private static final String CORE_JAR_NAME = "javelin-core-all.jar";
 
     private Path resolveCoreJarPath() {
+        Path found = findCoreJarPath(true);
+        if (found != null) {
+            return found;
+        }
+
+        throw new IllegalStateException(CORE_JAR_NAME + " not found in plugin lib or repo build output.");
+    }
+
+    private Path findCoreJarPath(boolean notifyOnMissing) {
         // 1. Check bundled inside the plugin's own lib/ directory
         IdeaPluginDescriptor descriptor = PluginManagerCore.getPlugin(PluginId.getId("com.javelin.plugin"));
         if (descriptor != null) {
@@ -151,10 +213,12 @@ public final class JavelinService {
             }
         }
 
-        NotificationGroupManager.getInstance()
-                .getNotificationGroup("Javelin Notifications")
-                .createNotification("Could not locate " + CORE_JAR_NAME + ". Build javelin-core first.", NotificationType.WARNING)
-                .notify(project);
-        throw new IllegalStateException(CORE_JAR_NAME + " not found in plugin lib or repo build output.");
+        if (notifyOnMissing) {
+            NotificationGroupManager.getInstance()
+                    .getNotificationGroup("Javelin Notifications")
+                    .createNotification("Could not locate " + CORE_JAR_NAME + ". Build javelin-core first.", NotificationType.WARNING)
+                    .notify(project);
+        }
+        return null;
     }
 }

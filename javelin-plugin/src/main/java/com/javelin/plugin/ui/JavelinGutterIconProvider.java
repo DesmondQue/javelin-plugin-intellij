@@ -30,9 +30,17 @@ public final class JavelinGutterIconProvider implements LineMarkerProvider {
         if (highlightProvider == null) {
             return null;
         }
+        if (!highlightProvider.isGutterEnabled()) {
+            return null;
+        }
 
         JavelinHighlightProvider.SuspicionEntry entry = highlightProvider.getEntryForElement(element);
         if (entry == null) {
+            return null;
+        }
+
+        // Only process leaf elements to avoid duplicate icons for the same line
+        if (element.getFirstChild() != null) {
             return null;
         }
 

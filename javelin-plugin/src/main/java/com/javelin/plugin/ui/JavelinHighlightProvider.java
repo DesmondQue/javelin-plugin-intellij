@@ -1,18 +1,8 @@
 package com.javelin.plugin.ui;
 
-import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.Service.Level;
 import com.intellij.openapi.editor.Document;
@@ -34,8 +24,22 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiManager;
+import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.model.FaultLocalizationResult;
 import com.javelin.plugin.service.JavelinService;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 @Service(Level.PROJECT)
 public final class JavelinHighlightProvider implements JavelinResultsListener {
@@ -46,12 +50,19 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
     // Index: FQCN -> (line number -> entry)
     private volatile Map<String, Map<Integer, SuspicionEntry>> entryIndex = Map.of();
+    private volatile boolean highlightingEnabled;
+    private volatile boolean gutterEnabled;
+    private volatile boolean errorStripeEnabled;
+    private volatile Set<SuspicionBand> visibleBands;
 
     public JavelinHighlightProvider(Project project) {
         this.project = project;
+        this.highlightingEnabled = JavelinUiSettings.isHighlightEnabled(project);
+        this.gutterEnabled = JavelinUiSettings.isGutterEnabled(project);
+        this.errorStripeEnabled = JavelinUiSettings.isStripeEnabled(project);
+        this.visibleBands = EnumSet.copyOf(JavelinUiSettings.getVisibleBands(project));
         this.project.getMessageBus().connect().subscribe(JavelinResultsListener.TOPIC, this);
 
-        // Warm state so highlights can be applied even when service is lazily created later.
         JavelinService service = project.getService(JavelinService.class);
         if (service != null) {
             this.entryIndex = buildIndex(service.getLastResults());
@@ -62,8 +73,78 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
     @Override
     public void resultsUpdated(List<FaultLocalizationResult> results) {
         this.entryIndex = buildIndex(results);
+        ApplicationManager.getApplication().invokeLater(() -> {
+            applyToOpenEditors();
+            DaemonCodeAnalyzer.getInstance(project).restart();
+        });
+    }
+
+    public void setHighlightingEnabled(boolean enabled) {
+        this.highlightingEnabled = enabled;
+        JavelinUiSettings.setHighlightEnabled(project, enabled);
+        if (!enabled) {
+            clearHighlights();
+        } else {
+            applyToOpenEditors();
+        }
+        DaemonCodeAnalyzer.getInstance(project).restart();
+    }
+
+    public boolean isHighlightingEnabled() {
+        return highlightingEnabled;
+    }
+
+    public void setGutterEnabled(boolean enabled) {
+        this.gutterEnabled = enabled;
+        JavelinUiSettings.setGutterEnabled(project, enabled);
+        DaemonCodeAnalyzer.getInstance(project).restart();
+    }
+
+    public boolean isGutterEnabled() {
+        return gutterEnabled;
+    }
+
+    public void setErrorStripeEnabled(boolean enabled) {
+        this.errorStripeEnabled = enabled;
+        JavelinUiSettings.setStripeEnabled(project, enabled);
+        applyToOpenEditors();
+    }
+
+    public boolean isErrorStripeEnabled() {
+        return errorStripeEnabled;
+    }
+
+    public Set<SuspicionBand> getVisibleBands() {
+        return EnumSet.copyOf(visibleBands);
+    }
+
+    public void setVisibleBands(Set<SuspicionBand> bands) {
+        if (bands == null || bands.isEmpty()) {
+            this.visibleBands = EnumSet.allOf(SuspicionBand.class);
+        } else {
+            this.visibleBands = EnumSet.copyOf(bands);
+        }
+        JavelinUiSettings.setVisibleBands(project, visibleBands);
         applyToOpenEditors();
         DaemonCodeAnalyzer.getInstance(project).restart();
+    }
+
+    public boolean isBandVisible(SuspicionBand band) {
+        return visibleBands.contains(band);
+    }
+
+    public void clearHighlights() {
+        FileEditor[] editors = FileEditorManager.getInstance(project).getAllEditors();
+        for (FileEditor fileEditor : editors) {
+            if (fileEditor instanceof TextEditor textEditor) {
+                MarkupModel markupModel = textEditor.getEditor().getMarkupModel();
+                for (RangeHighlighter highlighter : markupModel.getAllHighlighters()) {
+                    if (Boolean.TRUE.equals(highlighter.getUserData(JAVELIN_HIGHLIGHT_KEY))) {
+                        markupModel.removeHighlighter(highlighter);
+                    }
+                }
+            }
+        }
     }
 
     @Nullable
@@ -80,32 +161,25 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
         int lineNumber = document.getLineNumber(element.getTextRange().getStartOffset()) + 1;
 
-        // Try all declared classes in the file. Most files will map to one top-level class.
         for (PsiClass psiClass : javaFile.getClasses()) {
             String qualifiedName = psiClass.getQualifiedName();
             if (qualifiedName == null) {
                 continue;
             }
-            SuspicionEntry entry = entryIndex
-                    .getOrDefault(qualifiedName, Map.of())
-                    .get(lineNumber);
-            if (entry != null) {
+            SuspicionEntry entry = entryIndex.getOrDefault(qualifiedName, Map.of()).get(lineNumber);
+            if (entry != null && visibleBands.contains(entry.band())) {
                 return entry;
             }
         }
 
-        // Fallback for uncommon PSI states where classes are not yet resolvable.
         String packageName = javaFile.getPackageName();
         String simpleClassName = javaFile.getVirtualFile() == null
                 ? javaFile.getName().replaceFirst("\\.java$", "")
                 : javaFile.getVirtualFile().getNameWithoutExtension();
-        String fallbackFqcn = packageName.isBlank()
-                ? simpleClassName
-                : packageName + "." + simpleClassName;
+        String fallbackFqcn = packageName.isBlank() ? simpleClassName : packageName + "." + simpleClassName;
 
-        return entryIndex
-                .getOrDefault(fallbackFqcn, Map.of())
-                .get(lineNumber);
+        SuspicionEntry fallback = entryIndex.getOrDefault(fallbackFqcn, Map.of()).get(lineNumber);
+        return fallback != null && visibleBands.contains(fallback.band()) ? fallback : null;
     }
 
     private void applyToOpenEditors() {
@@ -120,11 +194,14 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
     private void applyToEditor(Editor editor) {
         MarkupModel markupModel = editor.getMarkupModel();
 
-        // Clear previously applied Javelin highlights.
         for (RangeHighlighter highlighter : markupModel.getAllHighlighters()) {
             if (Boolean.TRUE.equals(highlighter.getUserData(JAVELIN_HIGHLIGHT_KEY))) {
                 markupModel.removeHighlighter(highlighter);
             }
+        }
+
+        if (!highlightingEnabled) {
+            return;
         }
 
         VirtualFile virtualFile = FileDocumentManager.getInstance().getFile(editor.getDocument());
@@ -132,12 +209,13 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             return;
         }
 
-        PsiFile psiFile = PsiManager.getInstance(project).findFile(virtualFile);
-        if (!(psiFile instanceof PsiJavaFile javaFile)) {
-            return;
-        }
-
-        Map<Integer, SuspicionEntry> perLineEntries = collectEntriesForFile(javaFile);
+        Map<Integer, SuspicionEntry> perLineEntries = ReadAction.compute(() -> {
+            PsiFile psiFile = PsiManager.getInstance(project).findFile(virtualFile);
+            if (!(psiFile instanceof PsiJavaFile javaFile)) {
+                return Map.<Integer, SuspicionEntry>of();
+            }
+            return collectEntriesForFile(javaFile);
+        });
         if (perLineEntries.isEmpty()) {
             return;
         }
@@ -150,6 +228,9 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
         for (Map.Entry<Integer, SuspicionEntry> entry : perLineEntries.entrySet()) {
             int line = entry.getKey();
             SuspicionEntry suspicion = entry.getValue();
+            if (!visibleBands.contains(suspicion.band())) {
+                continue;
+            }
             if (line < 1 || line > document.getLineCount()) {
                 continue;
             }
@@ -171,8 +252,10 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
                     HighlighterTargetArea.EXACT_RANGE
             );
             highlighter.putUserData(JAVELIN_HIGHLIGHT_KEY, Boolean.TRUE);
-            highlighter.setErrorStripeMarkColor(suspicion.band().color());
-            highlighter.setErrorStripeTooltip(suspicion.tooltip());
+            if (errorStripeEnabled) {
+                highlighter.setErrorStripeMarkColor(suspicion.band().color());
+                highlighter.setErrorStripeTooltip(suspicion.tooltip());
+            }
         }
     }
 
@@ -229,15 +312,9 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             SuspicionBand band = SuspicionBand.fromRank(result.rank(), maxRank);
             double percentile = ((double) result.rank() / (double) maxRank) * 100.0;
 
-            SuspicionEntry entry = new SuspicionEntry(
-                    result.rank(),
-                    result.score(),
-                    percentile,
-                    band
-            );
+            SuspicionEntry entry = new SuspicionEntry(result.rank(), result.score(), percentile, band);
 
-            byClass
-                    .computeIfAbsent(result.fullyQualifiedClass(), key -> new LinkedHashMap<>())
+            byClass.computeIfAbsent(result.fullyQualifiedClass(), key -> new LinkedHashMap<>())
                     .put(result.lineNumber(), entry);
         }
 
@@ -266,6 +343,15 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
         public Color color() {
             return color;
+        }
+
+        public String description() {
+            return switch (this) {
+                case RED -> "Top 10% of ranked lines";
+                case ORANGE -> "Top 25% of ranked lines";
+                case YELLOW -> "Top 50% of ranked lines";
+                case GREEN -> "Lower-ranked suspicious lines";
+            };
         }
 
         public static SuspicionBand fromRank(int rank, int maxRank) {

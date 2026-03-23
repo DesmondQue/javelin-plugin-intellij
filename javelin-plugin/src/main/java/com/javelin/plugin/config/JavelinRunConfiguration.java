@@ -118,7 +118,8 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
     }
 
     public void setThreads(int threads) {
-        this.threads = Math.max(1, threads);
+        int max = Math.max(1, Runtime.getRuntime().availableProcessors());
+        this.threads = Math.max(1, Math.min(threads, max));
     }
 
     private static String detectDefaultTargetPath(Project project) {
@@ -172,13 +173,14 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
     }
 
     private int parseThreads(String text) {
+        int max = Math.max(1, Runtime.getRuntime().availableProcessors());
         if (text == null || text.isBlank()) {
-            return Runtime.getRuntime().availableProcessors();
+            return max;
         }
         try {
-            return Math.max(1, Integer.parseInt(text));
+            return Math.max(1, Math.min(Integer.parseInt(text), max));
         } catch (NumberFormatException ignored) {
-            return Runtime.getRuntime().availableProcessors();
+            return max;
         }
     }
 

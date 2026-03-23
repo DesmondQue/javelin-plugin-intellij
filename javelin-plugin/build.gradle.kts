@@ -44,6 +44,7 @@ intellijPlatform {
 
 tasks.withType<JavaCompile>().configureEach {
     options.release.set(21)
+    options.encoding = "UTF-8"
 }
 
 // Copy the javelin-core fat JAR into the plugin sandbox so the plugin can find it at runtime
