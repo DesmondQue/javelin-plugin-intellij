@@ -103,5 +103,3 @@ Javelin follows a 4-layer architecture:
 2. **Execution Layer** - Coverage collection (CoverageRunner, ProcessExecutor)
 3. **Data Processing Layer** - Matrix construction (DataParser, MatrixBuilder)
 4. **Math Layer** - Ochiai SBFL calculation (OchiaiCalculator)
-
-See [GeneralContext.md](GeneralContext.md) for detailed architecture documentation.
