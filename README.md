@@ -120,7 +120,7 @@ For repeated analysis with custom settings, create a **Javelin** run configurati
 For command-line usage without the IntelliJ plugin:
 
 ### Prerequisites
-- Java (JDK) 21 or 22
+- Java (JDK) 21
 - Gradle 8.5+ (or use the included wrapper)
 
 ### Build
