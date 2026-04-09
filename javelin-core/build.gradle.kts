@@ -44,6 +44,12 @@ dependencies {
     // JUnit Jupiter (JUnit 5 Support)
     implementation("org.junit.jupiter:junit-jupiter-engine:5.10.3")
 
+    // PITest Mutation Testing
+    implementation("org.pitest:pitest:1.17.4")
+    implementation("org.pitest:pitest-entry:1.17.4")
+    implementation("org.pitest:pitest-command-line:1.17.4")
+    implementation("org.pitest:pitest-junit5-plugin:1.2.1")
+
     // Testing dependencies for javelin-core
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -100,20 +106,55 @@ tasks.jar {
     }
 }
 
+// Merge META-INF/services files from all dependencies
+val mergeServiceFiles by tasks.registering {
+    dependsOn(configurations.runtimeClasspath)
+    val mergedDir = layout.buildDirectory.dir("merged-services")
+    outputs.dir(mergedDir)
+    
+    doLast {
+        val outDir = mergedDir.get().asFile.resolve("META-INF/services")
+        outDir.mkdirs()
+        
+        val serviceEntries = mutableMapOf<String, MutableSet<String>>()
+        
+        // Collect from all dependency JARs
+        configurations.runtimeClasspath.get()
+            .filter { it.name.endsWith("jar") }
+            .forEach { jar ->
+                zipTree(jar).matching { include("META-INF/services/**") }.forEach { file ->
+                    val lines = file.readLines().filter { it.isNotBlank() }
+                    serviceEntries.getOrPut(file.name) { mutableSetOf() }.addAll(lines)
+                }
+            }
+        
+        // Write merged files
+        for ((name, lines) in serviceEntries) {
+            outDir.resolve(name).writeText(lines.joinToString("\n") + "\n")
+        }
+    }
+}
+
 tasks.register<Jar>("fatJar") {
     archiveBaseName.set("javelin-core")
     archiveVersion.set("")
     archiveClassifier.set("all")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
+    dependsOn(configurations.runtimeClasspath, mergeServiceFiles)
+
     from(sourceSets.main.get().output)
     
-    dependsOn(configurations.runtimeClasspath)
     from({
         configurations.runtimeClasspath.get()
             .filter { it.name.endsWith("jar") }
             .map { zipTree(it) }
-    })
+    }) {
+        exclude("META-INF/services/**")
+    }
+    
+    // Include the merged service files
+    from(mergeServiceFiles.map { layout.buildDirectory.dir("merged-services").get() })
     
     from({
         configurations.runtimeClasspath.get()

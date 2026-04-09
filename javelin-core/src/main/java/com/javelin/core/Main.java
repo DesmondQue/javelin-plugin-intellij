@@ -3,15 +3,23 @@ package com.javelin.core;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import com.javelin.core.execution.CoverageRunner;
 import com.javelin.core.export.CsvExporter;
+import com.javelin.core.math.MutationScoreCalculator;
 import com.javelin.core.math.OchiaiCalculator;
+import com.javelin.core.math.OchiaiMSCalculator;
 import com.javelin.core.model.CoverageData;
+import com.javelin.core.model.MutationData;
 import com.javelin.core.model.SpectrumMatrix;
 import com.javelin.core.model.SuspiciousnessResult;
 import com.javelin.core.model.TestExecResult;
+import com.javelin.core.mutation.FaultRegionIdentifier;
+import com.javelin.core.mutation.MutationDataParser;
+import com.javelin.core.mutation.MutationRunner;
 import com.javelin.core.parsing.DataParser;
 import com.javelin.core.parsing.MatrixBuilder;
 import com.javelin.core.validation.SbflPreconditions;
@@ -48,12 +56,12 @@ import picocli.CommandLine.Option;
         "Algorithms:",
         "  ochiai      Standard Ochiai SBFL (default). Ranks lines by suspiciousness",
         "              using pass/fail test spectrum data.",
-        "  ochiai-ms   Ochiai with Mutation Score weighting (NOT YET IMPLEMENTED).",
-        "              Will weight passing tests by their mutation-killing strength.",
+        "  ochiai-ms   Ochiai with Mutation Score weighting. Weights passing tests",
+        "              by their mutation-killing strength using scoped PITest analysis.",
         "",
         "Examples:",
         "  javelin -a ochiai -t build/classes/java/main -T build/classes/java/test -o report.csv",
-        "  javelin --algorithm ochiai-ms --target /path/to/classes --test /path/to/tests --output results.csv",
+        "  javelin -a ochiai-ms -t build/classes/java/main -T build/classes/java/test -s src/main/java -o results.csv",
         "",
         "SBFL: requires >=1 failing test; 0 passing tests is allowed (lower ranking quality).",
         ""
@@ -78,7 +86,7 @@ public class Main implements Callable<Integer> {
     private Path outputPath;
 
     @Option(names = {"-s", "--source"}, required = false, paramLabel = "<dir>", order = 4,
-            description = "Source files path (optional)")
+            description = "Source files path (required for ochiai-ms)")
     private Path sourcePath;
 
     @Option(names = {"-c", "--classpath"}, required = false, paramLabel = "<path>", order = 5,
@@ -111,23 +119,25 @@ public class Main implements Callable<Integer> {
 
         if (algo.equals("ochiai-ms")) {
             System.out.printf("  Algorithm: Ochiai-MS (Mutation Score weighted)%n%n");
-            System.out.printf("NOTE: Ochiai-MS is not yet implemented.%n");
-            System.out.printf("      This algorithm will be available in a future release.%n");
-            System.out.printf("      Please use '--algorithm ochiai' for standard SBFL analysis.%n");
-            return 0;
+            if (sourcePath == null) {
+                System.err.printf("ERROR: --source/-s is required for ochiai-ms (PITest needs source dirs).%n");
+                return 1;
+            }
+        } else {
+            System.out.printf("  Algorithm: Ochiai SBFL%n%n");
         }
-
-        System.out.printf("  Algorithm: Ochiai SBFL%n%n");
 
         //step 1: validate input paths
         if (!validatePaths()) {
             return 1;
         }
 
-        printInputSummary();
+        boolean isOchiaiMS = algo.equals("ochiai-ms");
+        int totalSteps = isOchiaiMS ? 8 : 5;
+        printInputSummary(totalSteps);
 
         //step 2: run tests with JaCoCo coverage
-        System.out.printf("[2/5] Running tests with coverage instrumentation...%n");
+        System.out.printf("[2/%d] Running tests with coverage instrumentation...%n", totalSteps);
         long testExecStart = System.nanoTime();
         CoverageRunner coverageRunner = new CoverageRunner(targetPath, testPath, additionalClasspath, threadCount);
         List<TestExecResult> testExecResults = coverageRunner.run();
@@ -145,7 +155,7 @@ public class Main implements Callable<Integer> {
         System.out.println();
 
         //step 3: parse JaCoCo execution data (per-test coverage)
-        System.out.printf("[3/5] Parsing coverage data...%n");
+        System.out.printf("[3/%d] Parsing coverage data...%n", totalSteps);
         DataParser dataParser = new DataParser();
         CoverageData coverageData = dataParser.parseMultiple(testExecResults, targetPath);
         
@@ -163,31 +173,102 @@ public class Main implements Callable<Integer> {
             System.err.printf("WARNING: %s%n%n", validation.message());
         }
 
-        //step 4: build spectrum hit matrix and calculate Ochiai scores
-        System.out.printf("[4/5] Building spectrum hit matrix and calculating scores...%n");
-        long ochiaiStart = System.nanoTime();
+        //step 4: build spectrum hit matrix
+        System.out.printf("[4/%d] Building spectrum hit matrix...%n", totalSteps);
         MatrixBuilder matrixBuilder = new MatrixBuilder();
         SpectrumMatrix matrix = matrixBuilder.build(coverageData);
 
-        OchiaiCalculator calculator = new OchiaiCalculator();
-        List<SuspiciousnessResult> results = calculator.calculate(matrix);
-        long ochiaiTimeMs = (System.nanoTime() - ochiaiStart) / 1_000_000;
-        System.out.printf("      Calculated suspiciousness for %d line(s).%n%n", results.size());
+        List<SuspiciousnessResult> results;
+        long ochiaiTimeMs = 0;
+        long mutationTimeMs = 0;
 
-        //step 5: export to CSV
-        System.out.printf("[5/5] Exporting results to CSV...%n");
+        if (isOchiaiMS) {
+            // Phase 2: Scoped Mutation Analysis
+
+            // Identify fault region (lines covered by failing tests)
+            FaultRegionIdentifier regionIdentifier = new FaultRegionIdentifier();
+            FaultRegionIdentifier.FaultRegion faultRegion = regionIdentifier.identify(matrix);
+
+            if (faultRegion.targetClassNames().isEmpty()) {
+                System.err.printf("ERROR: No lines covered by failing tests. Cannot run mutation analysis.%n");
+                return 2;
+            }
+
+            System.out.printf("      Fault region: %d class(es), %d unique line(s).%n%n",
+                    faultRegion.targetClassNames().size(),
+                    faultRegion.targetLines().values().stream().mapToInt(Set::size).sum());
+
+            long mutationStart = System.nanoTime();
+
+            // Run scoped PITest
+            System.out.printf("[5/8] Running scoped mutation analysis (PITest)...%n");
+            MutationRunner mutationRunner = new MutationRunner(
+                    targetPath, testPath, sourcePath, additionalClasspath, threadCount, coverageData);
+            Path reportDir = mutationRunner.run(faultRegion.targetClassNames());
+
+            // Parse mutation data
+            System.out.printf("[6/8] Parsing mutation results...%n");
+            MutationDataParser mutationDataParser = new MutationDataParser();
+            MutationData mutationData = mutationDataParser.parse(reportDir);
+
+            System.out.printf("      Mutants: %d total (%d killed, %d survived, %d no coverage).%n",
+                    mutationData.mutants().size(),
+                    mutationData.getKilledCount(),
+                    mutationData.getSurvivedCount(),
+                    mutationData.getNoCoverageCount());
+
+            // Compute MS per passing test
+            System.out.printf("[7/8] Computing mutation scores per passing test...%n");
+            MutationScoreCalculator msCalculator = new MutationScoreCalculator();
+            Map<String, Double> mutationScores = msCalculator.calculate(mutationData, coverageData);
+
+            mutationTimeMs = (System.nanoTime() - mutationStart) / 1_000_000;
+
+            // Print mutation score summary
+            if (!mutationScores.isEmpty()) {
+                double avgMS = mutationScores.values().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+                long testsWithKills = mutationScores.values().stream().filter(ms -> ms > 0.0).count();
+                System.out.printf("      Passing tests with mutation scores: %d (avg MS: %.4f, %d with kills).%n%n",
+                        mutationScores.size(), avgMS, testsWithKills);
+            } else {
+                System.out.printf("      WARNING: No passing tests had mutation scores computed.%n%n");
+            }
+
+            // Compute Ochiai-MS suspiciousness scores
+            System.out.printf("[8/8] Calculating Ochiai-MS suspiciousness scores...%n");
+            long ochiaiMSStart = System.nanoTime();
+            OchiaiMSCalculator ochiaiMSCalc = new OchiaiMSCalculator();
+            results = ochiaiMSCalc.calculate(matrix, coverageData, mutationScores);
+            ochiaiTimeMs = (System.nanoTime() - ochiaiMSStart) / 1_000_000;
+            System.out.printf("      Calculated Ochiai-MS suspiciousness for %d line(s).%n%n", results.size());
+
+        } else {
+            // Standard Ochiai
+            long ochiaiStart = System.nanoTime();
+            OchiaiCalculator calculator = new OchiaiCalculator();
+            results = calculator.calculate(matrix);
+            ochiaiTimeMs = (System.nanoTime() - ochiaiStart) / 1_000_000;
+            System.out.printf("      Calculated suspiciousness for %d line(s).%n%n", results.size());
+        }
+
+        //export to CSV
+        System.out.printf("[%d/%d] Exporting results to CSV...%n", totalSteps, totalSteps);
         CsvExporter exporter = new CsvExporter();
         exporter.export(results, outputPath);
         System.out.printf("      Report saved to: %s%n%n", outputPath.toAbsolutePath());
 
         printResultsSummary(results);
-        printTimingSummary(testExecTimeMs, ochiaiTimeMs);
+        if (isOchiaiMS) {
+            printTimingSummaryMS(testExecTimeMs, mutationTimeMs, ochiaiTimeMs);
+        } else {
+            printTimingSummary(testExecTimeMs, ochiaiTimeMs);
+        }
 
         return 0;
     }
     //input summary
-    private void printInputSummary() {
-        System.out.printf("[1/5] Input validation complete.%n%n");
+    private void printInputSummary(int totalSteps) {
+        System.out.printf("[1/%d] Input validation complete.%n%n", totalSteps);
         System.out.printf("+---------------+---------------------------------------------------------+%n");
         System.out.printf("| Configuration | Path                                                    |%n");
         System.out.printf("+---------------+---------------------------------------------------------+%n");
@@ -249,6 +330,15 @@ public class Main implements Callable<Integer> {
         System.out.printf("  Test execution:      %s%n", formatDuration(testExecTimeMs));
         System.out.printf("  Ochiai calculation:  %s%n", formatDuration(ochiaiTimeMs));
         System.out.printf("  Total:               %s%n", formatDuration(testExecTimeMs + ochiaiTimeMs));
+    }
+
+    //timing summary for ochiai-ms (includes mutation analysis phase)
+    private void printTimingSummaryMS(long testExecTimeMs, long mutationTimeMs, long ochiaiMSTimeMs) {
+        System.out.printf("%nTiming:%n");
+        System.out.printf("  Test execution:      %s%n", formatDuration(testExecTimeMs));
+        System.out.printf("  Mutation analysis:   %s%n", formatDuration(mutationTimeMs));
+        System.out.printf("  Ochiai-MS scoring:   %s%n", formatDuration(ochiaiMSTimeMs));
+        System.out.printf("  Total:               %s%n", formatDuration(testExecTimeMs + mutationTimeMs + ochiaiMSTimeMs));
     }
 
     private String formatDuration(long ms) {

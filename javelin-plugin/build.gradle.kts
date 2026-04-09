@@ -29,11 +29,41 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         id.set("com.javelin.plugin")
-        name.set("Javelin - Fault Localization")
+        name.set("Javelin - An SBFL Tool for IntelliJ")
         version.set(project.version.toString())
-        description.set("IntelliJ wrapper around javelin-core CLI for SBFL analysis.")
+        description.set("""
+            <h2>Javelin — Spectrum-Based Fault Localization for Java</h2>
+            <p>
+              Javelin automates <b>Spectrum-Based Fault Localization (SBFL)</b> using the
+              <b>Ochiai</b> algorithm. It instruments your JUnit tests, builds a coverage
+              spectrum, and ranks every source line by suspiciousness — so you can find
+              the bug instead of searching for it.
+            </p>
+
+            <h3>Key Features</h3>
+            <ul>
+              <li><b>One-click analysis</b> — run from the Tools menu or press <code>Ctrl+Shift+J</code></li>
+              <li><b>4-tier visual highlighting</b> — red / orange / yellow / green bands in the editor, gutter, and scrollbar</li>
+              <li><b>Results table</b> — sortable, filterable, with double-click navigation to source</li>
+              <li><b>Export to CSV</b> — share or archive ranked results</li>
+              <li><b>Status-bar readiness widget</b> — instant project health check before analysis</li>
+              <li><b>Run configurations</b> — save and reuse custom analysis settings</li>
+            </ul>
+
+            <h3>Requirements</h3>
+            <ul>
+              <li>IntelliJ IDEA 2025.1 – 2025.3.x (Community or Ultimate)</li>
+              <li>A Java project with JUnit tests (at least one failing test required)</li>
+            </ul>
+
+            <p>
+              <b>Documentation:</b>
+              <a href="https://github.com/DesmondQue/Javelin#readme">GitHub README</a>
+            </p>
+        """.trimIndent())
         vendor {
-            name.set("Javelin Team")
+            name.set("TwentyOneCopilots")
+            url.set("https://github.com/DesmondQue/Javelin")
         }
         ideaVersion {
             sinceBuild.set("251")
