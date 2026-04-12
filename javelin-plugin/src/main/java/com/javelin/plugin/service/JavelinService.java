@@ -195,19 +195,19 @@ public final class JavelinService {
             }
         }
 
-        // 2. Check relative to the opened project (if project itself contains javelin-core)
+        // 2. Check relative to the opened project (if project itself contains javelin-cli/javelin-core)
         String basePath = project.getBasePath();
         if (basePath != null) {
-            Path inProject = Path.of(basePath).resolve("javelin-core").resolve("build").resolve("libs").resolve(CORE_JAR_NAME);
+            Path inProject = Path.of(basePath).resolve("javelin-cli").resolve("javelin-core").resolve("build").resolve("libs").resolve(CORE_JAR_NAME);
             if (Files.exists(inProject)) {
                 return inProject;
             }
         }
 
-        // 3. Check the plugin's source repo location (sibling javelin-core/ next to javelin-plugin/)
+        // 3. Check the plugin's source repo location (sibling javelin-cli/javelin-core/ next to javelin-plugin/)
         if (descriptor != null) {
             Path pluginDir = descriptor.getPluginPath();
-            Path sibling = pluginDir.getParent().resolve("javelin-core").resolve("build").resolve("libs").resolve(CORE_JAR_NAME);
+            Path sibling = pluginDir.getParent().resolve("javelin-cli").resolve("javelin-core").resolve("build").resolve("libs").resolve(CORE_JAR_NAME);
             if (Files.exists(sibling)) {
                 return sibling;
             }

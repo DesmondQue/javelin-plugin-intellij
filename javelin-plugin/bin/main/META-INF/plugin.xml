@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.javelin.plugin</id>
     <name>Javelin - An SBFL Tool for IntelliJ</name>
-    <vendor url="https://github.com/DesmondQue/Javelin">TwentyOneCopilots</vendor>
+    <vendor url="https://github.com/DesmondQue/javelin-plugin-intellij">TwentyOneCopilots</vendor>
 
     <description><![CDATA[
         <h2>Javelin — Spectrum-Based Fault Localization for Java</h2>
@@ -30,7 +30,7 @@
 
         <p>
           <b>Documentation:</b>
-          <a href="https://github.com/DesmondQue/Javelin#readme">GitHub README</a>
+          <a href="https://github.com/DesmondQue/javelin-plugin-intellij#readme">GitHub README</a>
         </p>
     ]]></description>
 

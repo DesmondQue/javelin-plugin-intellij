@@ -1,0 +1,3 @@
+[submodule "javelin-cli"]
+	path = javelin-cli
+	url = https://github.com/DesmondQue/javelin-cli.git

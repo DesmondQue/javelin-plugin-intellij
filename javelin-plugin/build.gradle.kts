@@ -58,12 +58,12 @@ intellijPlatform {
 
             <p>
               <b>Documentation:</b>
-              <a href="https://github.com/DesmondQue/Javelin#readme">GitHub README</a>
+              <a href="https://github.com/DesmondQue/javelin-plugin-intellij#readme">GitHub README</a>
             </p>
         """.trimIndent())
         vendor {
             name.set("TwentyOneCopilots")
-            url.set("https://github.com/DesmondQue/Javelin")
+            url.set("https://github.com/DesmondQue/javelin-plugin-intellij")
         }
         ideaVersion {
             sinceBuild.set("251")
@@ -78,7 +78,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 // Copy the javelin-core fat JAR into the plugin sandbox so the plugin can find it at runtime
-val coreJarFile = file("../javelin-core/build/libs/javelin-core-all.jar")
+val coreJarFile = file("../javelin-cli/javelin-core/build/libs/javelin-core-all.jar")
 tasks.named("prepareSandbox") {
     doLast {
         if (coreJarFile.exists()) {

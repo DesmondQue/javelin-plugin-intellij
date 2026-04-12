@@ -1,4 +1,4 @@
 rootProject.name = "javelin"
 
-includeBuild("javelin-core")
+includeBuild("javelin-cli/javelin-core")
 includeBuild("test-subject")
