@@ -31,7 +31,8 @@ public final class JavelinService {
             String algorithm,
             String classpath,
             int threads,
-            Path outputPath
+            Path outputPath,
+            Path sourcePath
     ) {
     }
 
@@ -40,6 +41,7 @@ public final class JavelinService {
     private final CsvResultParser csvParser = new CsvResultParser();
     private List<FaultLocalizationResult> lastResults = List.of();
     private volatile long lastRunDurationNanos = -1L;
+    private volatile boolean running;
     private volatile Integer cachedJavaMajor;
     private volatile String cachedJavaVersionOutput;
 
@@ -72,7 +74,8 @@ public final class JavelinService {
                 request.testPath(),
                 outputPath,
                 request.classpath(),
-                request.threads()
+                request.threads(),
+                request.sourcePath()
         );
 
         if (processResult.exitCode() == 2) {
@@ -102,6 +105,14 @@ public final class JavelinService {
 
     public long getLastRunDurationNanos() {
         return lastRunDurationNanos;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
     }
 
     public void clearResults() {
@@ -171,6 +182,11 @@ public final class JavelinService {
         }
         if (!Files.isDirectory(request.testPath())) {
             throw new IllegalArgumentException("Test classes directory not found: " + request.testPath());
+        }
+        if ("ochiai-ms".equals(request.algorithm())) {
+            if (request.sourcePath() == null || !Files.isDirectory(request.sourcePath())) {
+                throw new IllegalArgumentException("Source directory is required for ochiai-ms but was not found: " + request.sourcePath());
+            }
         }
     }
 

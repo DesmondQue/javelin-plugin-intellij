@@ -66,7 +66,8 @@ public final class JavelinRunProfileState implements RunProfileState {
                         configuration.getAlgorithm(),
                         resolveModuleClasspath(),
                         configuration.getThreads(),
-                        configuration.getOutputPath().isBlank() ? null : Path.of(configuration.getOutputPath())
+                        configuration.getOutputPath().isBlank() ? null : Path.of(configuration.getOutputPath()),
+                        configuration.getSourcePath().isBlank() ? null : Path.of(configuration.getSourcePath())
                 ));
                 console.print("Completed. Results: " + results.size() + System.lineSeparator(), ConsoleViewContentType.SYSTEM_OUTPUT);
             } catch (Exception ex) {

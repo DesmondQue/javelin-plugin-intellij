@@ -17,7 +17,9 @@ import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.CompilerModuleExtension;
+import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.JDOMExternalizerUtil;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 
 public final class JavelinRunConfiguration extends RunConfigurationBase<Object> {
@@ -26,12 +28,14 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
     private String testPath;
     private String algorithm = "ochiai";
     private String outputPath = "";
+    private String sourcePath = "";
     private int threads = Runtime.getRuntime().availableProcessors();
 
     protected JavelinRunConfiguration(@NotNull Project project, @NotNull ConfigurationFactory factory, @NotNull String name) {
         super(project, factory, name);
         this.targetPath = detectDefaultTargetPath(project);
         this.testPath = detectDefaultTestPath(project);
+        this.sourcePath = detectDefaultSourcePath(project);
     }
 
     @Override
@@ -50,6 +54,9 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
         if (!"ochiai".equals(algorithm) && !"ochiai-ms".equals(algorithm)) {
             throw new RuntimeConfigurationException("Algorithm must be one of: ochiai, ochiai-ms.");
         }
+        if ("ochiai-ms".equals(algorithm) && (sourcePath == null || sourcePath.isBlank())) {
+            throw new RuntimeConfigurationException("Source directory is required for ochiai-ms.");
+        }
         if (threads <= 0) {
             throw new RuntimeConfigurationException("Threads must be greater than zero.");
         }
@@ -67,6 +74,7 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
         testPath = valueOrDefault(JDOMExternalizerUtil.readField(element, "testPath"), detectDefaultTestPath(getProject()));
         algorithm = valueOrDefault(JDOMExternalizerUtil.readField(element, "algorithm"), "ochiai");
         outputPath = valueOrDefault(JDOMExternalizerUtil.readField(element, "outputPath"), "");
+        sourcePath = valueOrDefault(JDOMExternalizerUtil.readField(element, "sourcePath"), "");
         String threadsText = JDOMExternalizerUtil.readField(element, "threads");
         threads = parseThreads(threadsText);
     }
@@ -78,6 +86,7 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
         JDOMExternalizerUtil.writeField(element, "testPath", testPath);
         JDOMExternalizerUtil.writeField(element, "algorithm", algorithm);
         JDOMExternalizerUtil.writeField(element, "outputPath", outputPath);
+        JDOMExternalizerUtil.writeField(element, "sourcePath", sourcePath);
         JDOMExternalizerUtil.writeField(element, "threads", Integer.toString(threads));
     }
 
@@ -111,6 +120,14 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
 
     public void setOutputPath(String outputPath) {
         this.outputPath = outputPath;
+    }
+
+    public String getSourcePath() {
+        return sourcePath;
+    }
+
+    public void setSourcePath(String sourcePath) {
+        this.sourcePath = sourcePath;
     }
 
     public int getThreads() {
@@ -170,6 +187,27 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
         Path mavenPath = Path.of(basePath).resolve("target").resolve("test-classes");
         if (java.nio.file.Files.isDirectory(mavenPath)) return mavenPath.toString();
         return gradlePath.toString();
+    }
+
+    private static String detectDefaultSourcePath(Project project) {
+        // 1. Use IntelliJ module API to find source roots
+        for (Module module : ModuleManager.getInstance(project).getModules()) {
+            VirtualFile[] sourceRoots = ModuleRootManager.getInstance(module).getSourceRoots(false);
+            for (VirtualFile root : sourceRoots) {
+                Path detected = Path.of(root.getPath());
+                if (java.nio.file.Files.isDirectory(detected)) return detected.toString();
+            }
+        }
+        // 2. Gradle/Maven standard layout fallback
+        String basePath = project.getBasePath();
+        if (basePath == null || basePath.isBlank()) {
+            return "";
+        }
+        Path srcMainJava = Path.of(basePath).resolve("src").resolve("main").resolve("java");
+        if (java.nio.file.Files.isDirectory(srcMainJava)) return srcMainJava.toString();
+        Path src = Path.of(basePath).resolve("src");
+        if (java.nio.file.Files.isDirectory(src)) return src.toString();
+        return srcMainJava.toString();
     }
 
     private int parseThreads(String text) {

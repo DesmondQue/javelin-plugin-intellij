@@ -23,8 +23,6 @@ import javax.swing.SpinnerNumberModel;
 
 import org.jetbrains.annotations.NotNull;
 
-import com.intellij.notification.NotificationGroupManager;
-import com.intellij.notification.NotificationType;
 import com.intellij.openapi.compiler.CompilationStatusListener;
 import com.intellij.openapi.compiler.CompilerTopics;
 import com.intellij.openapi.module.Module;
@@ -185,18 +183,16 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
                 Object selected = algorithmCombo.getSelectedItem();
                 if (selected != null) {
                     JavelinUiSettings.setAlgorithm(project, selected.toString());
-                    if ("ochiai-ms".equals(selected.toString())) {
-                        NotificationGroupManager.getInstance()
-                                .getNotificationGroup("Javelin Notifications")
-                                .createNotification("ochiai-ms is not implemented yet. Use ochiai for now.", NotificationType.WARNING)
-                                .notify(project);
-                    }
                 }
             });
 
             int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
             JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(JavelinUiSettings.getMaxThreads(project), 1, maxThreads, 1));
             threadsSpinner.addChangeListener(e -> JavelinUiSettings.setMaxThreads(project, (Integer) threadsSpinner.getValue()));
+
+            boolean isRunning = project.getService(JavelinService.class).isRunning();
+            algorithmCombo.setEnabled(!isRunning);
+            threadsSpinner.setEnabled(!isRunning);
 
             cgbc.gridx = 0; controls.add(new JLabel("Algorithm:"), cgbc);
             cgbc.gridx = 1; controls.add(algorithmCombo, cgbc);
@@ -206,10 +202,13 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
 
             // Run button - green when ready, grey when disabled
             JButton runButton = new JButton("Run Javelin Analysis");
-            runButton.setEnabled(readiness.ready);
+            runButton.setEnabled(readiness.ready && !isRunning);
             runButton.setOpaque(true);
-            runButton.setBorderPainted(readiness.ready);
-            if (readiness.ready) {
+            runButton.setBorderPainted(readiness.ready && !isRunning);
+            if (isRunning) {
+                runButton.setText("Analysis Running...");
+                runButton.setToolTipText("Javelin analysis is in progress");
+            } else if (readiness.ready) {
                 runButton.setBackground(new Color(0x38, 0x8E, 0x3C));
                 runButton.setForeground(Color.WHITE);
             } else {

@@ -1,5 +1,14 @@
 package com.javelin.plugin.actions;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import org.jetbrains.annotations.NotNull;
+
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
@@ -13,20 +22,14 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.CompilerModuleExtension;
+import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.OrderEnumerator;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.model.FaultLocalizationResult;
 import com.javelin.plugin.service.JavelinService;
-import org.jetbrains.annotations.NotNull;
-
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 public final class RunJavelinAction extends AnAction {
 
@@ -47,11 +50,6 @@ public final class RunJavelinAction extends AnAction {
             return;
         }
 
-        if ("ochiai-ms".equals(algorithm)) {
-            notifyUser(project, "ochiai-ms is not implemented yet. Please use ochiai.", NotificationType.WARNING);
-            return;
-        }
-
         CompilerManager.getInstance(project).make((aborted, errors, warnings, compileContext) -> {
             if (aborted || errors > 0) {
                 notifyUser(project, "Build failed (" + errors + " error(s)). Fix compilation errors before running Javelin.", NotificationType.ERROR);
@@ -60,8 +58,16 @@ public final class RunJavelinAction extends AnAction {
 
             Path targetPath = detectTargetPath(project);
             Path testPath = detectTestPath(project);
+            Path sourcePath = "ochiai-ms".equals(algorithm) ? detectSourcePath(project) : null;
 
             JavelinService service = project.getService(JavelinService.class);
+
+            if (service.isRunning()) {
+                notifyUser(project, "Javelin analysis is already running.", NotificationType.WARNING);
+                return;
+            }
+
+            service.setRunning(true);
 
             Task.Backgroundable task = new Task.Backgroundable(project, "Running Javelin Analysis", true) {
                 @Override
@@ -75,7 +81,8 @@ public final class RunJavelinAction extends AnAction {
                                 algorithm,
                                 classpath,
                                 threads,
-                                null
+                                null,
+                                sourcePath
                         ), indicator::setText);
 
                         ApplicationManager.getApplication().invokeLater(() -> {
@@ -98,6 +105,8 @@ public final class RunJavelinAction extends AnAction {
                         notifyUser(project, summary, NotificationType.INFORMATION);
                     } catch (Exception ex) {
                         notifyUser(project, ex.getMessage() == null ? "Javelin analysis failed." : ex.getMessage(), NotificationType.ERROR);
+                    } finally {
+                        service.setRunning(false);
                     }
                 }
             };
@@ -164,6 +173,31 @@ public final class RunJavelinAction extends AnAction {
             return mavenPath;
         }
         return gradlePath;
+    }
+
+    private static Path detectSourcePath(Project project) {
+        // 1. Use IntelliJ module API to find source roots (most reliable)
+        for (Module module : ModuleManager.getInstance(project).getModules()) {
+            VirtualFile[] sourceRoots = ModuleRootManager.getInstance(module).getSourceRoots(false);
+            for (VirtualFile root : sourceRoots) {
+                Path rootPath = Path.of(root.getPath());
+                if (Files.isDirectory(rootPath)) {
+                    return rootPath;
+                }
+            }
+        }
+        // 2. Gradle/Maven standard layout fallback
+        Path basePath = Path.of(project.getBasePath());
+        Path srcMainJava = basePath.resolve("src").resolve("main").resolve("java");
+        if (Files.isDirectory(srcMainJava)) {
+            return srcMainJava;
+        }
+        // 3. Flat src/ directory fallback
+        Path src = basePath.resolve("src");
+        if (Files.isDirectory(src)) {
+            return src;
+        }
+        return srcMainJava;
     }
 
     private static String resolveModuleClasspath(Project project) {

@@ -1,14 +1,14 @@
 package com.javelin.plugin.bridge;
 
-import com.intellij.execution.configurations.GeneralCommandLine;
-import com.intellij.execution.process.CapturingProcessHandler;
-import com.intellij.execution.process.ProcessOutput;
-import com.intellij.execution.ExecutionException;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.intellij.execution.ExecutionException;
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.execution.process.CapturingProcessHandler;
+import com.intellij.execution.process.ProcessOutput;
 
 public final class CoreProcessRunner {
 
@@ -24,7 +24,8 @@ public final class CoreProcessRunner {
             Path testPath,
             Path outputPath,
             String classpath,
-            int threads
+            int threads,
+            Path sourcePath
     ) {
         List<String> command = new ArrayList<>();
         command.add(jbrJavaPath());
@@ -38,6 +39,11 @@ public final class CoreProcessRunner {
         command.add(testPath.toString());
         command.add("-o");
         command.add(outputPath.toString());
+
+        if (sourcePath != null) {
+            command.add("-s");
+            command.add(sourcePath.toString());
+        }
 
         if (classpath != null && !classpath.isBlank()) {
             command.add("-c");
