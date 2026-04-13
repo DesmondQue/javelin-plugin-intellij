@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -200,6 +201,13 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
             cgbc.gridx = 0; controls.add(new JLabel("Threads:"), cgbc);
             cgbc.gridx = 1; controls.add(threadsSpinner, cgbc);
 
+            JCheckBox offlineCheckbox = new JCheckBox("Offline mode");
+            offlineCheckbox.setToolTipText("Force offline bytecode instrumentation (for mockito-inline, bytebuddy-agent, etc.)");
+            offlineCheckbox.setEnabled(!isRunning);
+            cgbc.gridy = 2;
+            cgbc.gridx = 0; cgbc.gridwidth = 2; controls.add(offlineCheckbox, cgbc);
+            cgbc.gridwidth = 1;
+
             // Run button - green when ready, grey when disabled
             JButton runButton = new JButton("Run Javelin Analysis");
             runButton.setEnabled(readiness.ready && !isRunning);
@@ -217,7 +225,8 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
             runButton.addActionListener(e -> {
                 String algorithm = JavelinUiSettings.getAlgorithm(project);
                 int threads = JavelinUiSettings.getMaxThreads(project);
-                RunJavelinAction.runAnalysis(project, algorithm, threads);
+                RunJavelinAction.runAnalysis(project, algorithm, threads,
+                        null, null, null, null, offlineCheckbox.isSelected());
             });
 
             // Bottom: controls + run button

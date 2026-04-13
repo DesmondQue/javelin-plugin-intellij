@@ -25,7 +25,8 @@ public final class CoreProcessRunner {
             Path outputPath,
             String classpath,
             int threads,
-            Path sourcePath
+            Path sourcePath,
+            boolean offline
     ) {
         List<String> command = new ArrayList<>();
         command.add(jbrJavaPath());
@@ -53,6 +54,10 @@ public final class CoreProcessRunner {
         if (threads > 0) {
             command.add("-j");
             command.add(Integer.toString(threads));
+        }
+
+        if (offline) {
+            command.add("--offline");
         }
 
         GeneralCommandLine cmd = new GeneralCommandLine(command);

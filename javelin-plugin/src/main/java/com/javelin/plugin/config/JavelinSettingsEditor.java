@@ -4,6 +4,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
@@ -28,6 +29,7 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
     private final JBTextField outputPathField = new JBTextField();
     private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
+    private final JCheckBox offlineCheckbox = new JCheckBox("Force offline instrumentation mode");
 
     public JavelinSettingsEditor() {
         FileChooserDescriptor targetDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
@@ -51,7 +53,8 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
         addRow("Algorithm:", algorithmCombo, row++);
         addRow(sourceDirLabel, sourceDirField, row++);
         addRow("Output CSV (optional):", outputPathField, row++);
-        addRow("Threads (default: " + maxThreads + " cores):", threadsSpinner, row);
+        addRow("Threads (default: " + maxThreads + " cores):", threadsSpinner, row++);
+        addRow("", offlineCheckbox, row);
 
         updateSourceDirVisibility();
         algorithmCombo.addActionListener(e -> updateSourceDirVisibility());
@@ -71,6 +74,7 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
         sourceDirField.setText(configuration.getSourcePath());
         outputPathField.setText(configuration.getOutputPath());
         threadsSpinner.setValue(Math.max(1, Math.min(configuration.getThreads(), maxThreads)));
+        offlineCheckbox.setSelected(configuration.isOffline());
         updateSourceDirVisibility();
     }
 
@@ -83,6 +87,7 @@ public final class JavelinSettingsEditor extends SettingsEditor<JavelinRunConfig
         configuration.setSourcePath(sourceDirField.getText().trim());
         configuration.setOutputPath(outputPathField.getText().trim());
         configuration.setThreads((int) threadsSpinner.getValue());
+        configuration.setOffline(offlineCheckbox.isSelected());
     }
 
     @Override

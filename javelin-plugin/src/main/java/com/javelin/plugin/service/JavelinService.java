@@ -32,7 +32,8 @@ public final class JavelinService {
             String classpath,
             int threads,
             Path outputPath,
-            Path sourcePath
+            Path sourcePath,
+            boolean offline
     ) {
     }
 
@@ -75,7 +76,8 @@ public final class JavelinService {
                 outputPath,
                 request.classpath(),
                 request.threads(),
-                request.sourcePath()
+                request.sourcePath(),
+                request.offline()
         );
 
         if (processResult.exitCode() == 2) {

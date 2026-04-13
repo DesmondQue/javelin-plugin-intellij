@@ -1,9 +1,5 @@
 package com.javelin.plugin.actions;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -16,20 +12,16 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.compiler.CompilerManager;
-import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.roots.CompilerModuleExtension;
-import com.intellij.openapi.roots.ModuleRootManager;
-import com.intellij.openapi.roots.OrderEnumerator;
-import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.model.FaultLocalizationResult;
 import com.javelin.plugin.service.JavelinService;
+import com.javelin.plugin.util.PathDetector;
+
+import java.nio.file.Path;
 
 public final class RunJavelinAction extends AnAction {
 
@@ -46,24 +38,42 @@ public final class RunJavelinAction extends AnAction {
     }
 
     public static void runAnalysis(Project project, String algorithm, int threads) {
+        runAnalysis(project, algorithm, threads, null, null, null, null, false, null);
+    }
+
+    public static void runAnalysis(Project project, String algorithm, int threads,
+                                    Path manualTarget, Path manualTest, Path manualSource,
+                                    String manualClasspath, boolean offline) {
+        runAnalysis(project, algorithm, threads, manualTarget, manualTest, manualSource, manualClasspath, offline, null);
+    }
+
+    public static void runAnalysis(Project project, String algorithm, int threads,
+                                    Path manualTarget, Path manualTest, Path manualSource,
+                                    String manualClasspath, boolean offline,
+                                    Runnable onComplete) {
         if (project == null || project.getBasePath() == null) {
+            if (onComplete != null) onComplete.run();
             return;
         }
 
         CompilerManager.getInstance(project).make((aborted, errors, warnings, compileContext) -> {
             if (aborted || errors > 0) {
                 notifyUser(project, "Build failed (" + errors + " error(s)). Fix compilation errors before running Javelin.", NotificationType.ERROR);
+                if (onComplete != null) onComplete.run();
                 return;
             }
 
-            Path targetPath = detectTargetPath(project);
-            Path testPath = detectTestPath(project);
-            Path sourcePath = "ochiai-ms".equals(algorithm) ? detectSourcePath(project) : null;
+            Path targetPath = manualTarget != null ? manualTarget : PathDetector.detectTargetPath(project);
+            Path testPath = manualTest != null ? manualTest : PathDetector.detectTestPath(project);
+            Path sourcePath = "ochiai-ms".equals(algorithm)
+                    ? (manualSource != null ? manualSource : PathDetector.detectSourcePath(project))
+                    : null;
 
             JavelinService service = project.getService(JavelinService.class);
 
             if (service.isRunning()) {
                 notifyUser(project, "Javelin analysis is already running.", NotificationType.WARNING);
+                if (onComplete != null) onComplete.run();
                 return;
             }
 
@@ -74,7 +84,7 @@ public final class RunJavelinAction extends AnAction {
                 public void run(@NotNull ProgressIndicator indicator) {
                     indicator.setText("Javelin: Running " + algorithm + " analysis...");
                     try {
-                        String classpath = resolveModuleClasspath(project);
+                        String classpath = manualClasspath != null ? manualClasspath : PathDetector.resolveModuleClasspath(project);
                         List<FaultLocalizationResult> results = service.runAnalysis(new JavelinService.RunRequest(
                                 targetPath,
                                 testPath,
@@ -82,7 +92,8 @@ public final class RunJavelinAction extends AnAction {
                                 classpath,
                                 threads,
                                 null,
-                                sourcePath
+                                sourcePath,
+                                offline
                         ), indicator::setText);
 
                         ApplicationManager.getApplication().invokeLater(() -> {
@@ -107,6 +118,9 @@ public final class RunJavelinAction extends AnAction {
                         notifyUser(project, ex.getMessage() == null ? "Javelin analysis failed." : ex.getMessage(), NotificationType.ERROR);
                     } finally {
                         service.setRunning(false);
+                        if (onComplete != null) {
+                            ApplicationManager.getApplication().invokeLater(onComplete);
+                        }
                     }
                 }
             };
@@ -123,95 +137,6 @@ public final class RunJavelinAction extends AnAction {
     @Override
     public @NotNull ActionUpdateThread getActionUpdateThread() {
         return ActionUpdateThread.BGT;
-    }
-
-    private static Path detectTargetPath(Project project) {
-        for (Module module : ModuleManager.getInstance(project).getModules()) {
-            CompilerModuleExtension ext = CompilerModuleExtension.getInstance(module);
-            if (ext == null) {
-                continue;
-            }
-            String outputUrl = ext.getCompilerOutputUrl();
-            if (outputUrl != null && !outputUrl.isBlank()) {
-                Path detected = Path.of(VirtualFileManager.extractPath(outputUrl));
-                if (Files.isDirectory(detected)) {
-                    return detected;
-                }
-            }
-        }
-        Path gradlePath = Path.of(project.getBasePath()).resolve("build").resolve("classes").resolve("java").resolve("main");
-        if (Files.isDirectory(gradlePath)) {
-            return gradlePath;
-        }
-        Path mavenPath = Path.of(project.getBasePath()).resolve("target").resolve("classes");
-        if (Files.isDirectory(mavenPath)) {
-            return mavenPath;
-        }
-        return gradlePath;
-    }
-
-    private static Path detectTestPath(Project project) {
-        for (Module module : ModuleManager.getInstance(project).getModules()) {
-            CompilerModuleExtension ext = CompilerModuleExtension.getInstance(module);
-            if (ext == null) {
-                continue;
-            }
-            String outputUrl = ext.getCompilerOutputUrlForTests();
-            if (outputUrl != null && !outputUrl.isBlank()) {
-                Path detected = Path.of(VirtualFileManager.extractPath(outputUrl));
-                if (Files.isDirectory(detected)) {
-                    return detected;
-                }
-            }
-        }
-        Path gradlePath = Path.of(project.getBasePath()).resolve("build").resolve("classes").resolve("java").resolve("test");
-        if (Files.isDirectory(gradlePath)) {
-            return gradlePath;
-        }
-        Path mavenPath = Path.of(project.getBasePath()).resolve("target").resolve("test-classes");
-        if (Files.isDirectory(mavenPath)) {
-            return mavenPath;
-        }
-        return gradlePath;
-    }
-
-    private static Path detectSourcePath(Project project) {
-        // 1. Use IntelliJ module API to find source roots (most reliable)
-        for (Module module : ModuleManager.getInstance(project).getModules()) {
-            VirtualFile[] sourceRoots = ModuleRootManager.getInstance(module).getSourceRoots(false);
-            for (VirtualFile root : sourceRoots) {
-                Path rootPath = Path.of(root.getPath());
-                if (Files.isDirectory(rootPath)) {
-                    return rootPath;
-                }
-            }
-        }
-        // 2. Gradle/Maven standard layout fallback
-        Path basePath = Path.of(project.getBasePath());
-        Path srcMainJava = basePath.resolve("src").resolve("main").resolve("java");
-        if (Files.isDirectory(srcMainJava)) {
-            return srcMainJava;
-        }
-        // 3. Flat src/ directory fallback
-        Path src = basePath.resolve("src");
-        if (Files.isDirectory(src)) {
-            return src;
-        }
-        return srcMainJava;
-    }
-
-    private static String resolveModuleClasspath(Project project) {
-        List<String> entries = new ArrayList<>();
-        for (Module module : ModuleManager.getInstance(project).getModules()) {
-            entries.addAll(OrderEnumerator.orderEntries(module)
-                    .recursively()
-                    .withoutSdk()
-                    .classes()
-                    .getPathsList()
-                    .getPathList());
-        }
-        entries.removeIf(String::isBlank);
-        return String.join(File.pathSeparator, entries);
     }
 
     private static void notifyUser(Project project, String content, NotificationType type) {

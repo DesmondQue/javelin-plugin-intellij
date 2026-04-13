@@ -30,6 +30,7 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
     private String outputPath = "";
     private String sourcePath = "";
     private int threads = Runtime.getRuntime().availableProcessors();
+    private boolean offline = false;
 
     protected JavelinRunConfiguration(@NotNull Project project, @NotNull ConfigurationFactory factory, @NotNull String name) {
         super(project, factory, name);
@@ -77,6 +78,7 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
         sourcePath = valueOrDefault(JDOMExternalizerUtil.readField(element, "sourcePath"), "");
         String threadsText = JDOMExternalizerUtil.readField(element, "threads");
         threads = parseThreads(threadsText);
+        offline = Boolean.parseBoolean(JDOMExternalizerUtil.readField(element, "offline"));
     }
 
     @Override
@@ -88,6 +90,7 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
         JDOMExternalizerUtil.writeField(element, "outputPath", outputPath);
         JDOMExternalizerUtil.writeField(element, "sourcePath", sourcePath);
         JDOMExternalizerUtil.writeField(element, "threads", Integer.toString(threads));
+        JDOMExternalizerUtil.writeField(element, "offline", Boolean.toString(offline));
     }
 
     public String getTargetPath() {
@@ -137,6 +140,14 @@ public final class JavelinRunConfiguration extends RunConfigurationBase<Object> 
     public void setThreads(int threads) {
         int max = Math.max(1, Runtime.getRuntime().availableProcessors());
         this.threads = Math.max(1, Math.min(threads, max));
+    }
+
+    public boolean isOffline() {
+        return offline;
+    }
+
+    public void setOffline(boolean offline) {
+        this.offline = offline;
     }
 
     private static String detectDefaultTargetPath(Project project) {

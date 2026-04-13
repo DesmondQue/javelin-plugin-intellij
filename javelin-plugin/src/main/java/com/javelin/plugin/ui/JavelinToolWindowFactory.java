@@ -20,6 +20,7 @@ import com.intellij.openapi.actionSystem.ToggleAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
+import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import com.javelin.plugin.service.JavelinService;
@@ -28,14 +29,23 @@ public final class JavelinToolWindowFactory implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        ResultsPanel panel = new ResultsPanel(project);
+        ConfigurationPanel configPanel = new ConfigurationPanel(project);
+        ResultsPanel resultsPanel = new ResultsPanel(project);
         JavelinService service = project.getService(JavelinService.class);
-        panel.updateResults(service.getLastResults());
+        resultsPanel.updateResults(service.getLastResults());
 
         project.getMessageBus().connect(toolWindow.getDisposable())
-                .subscribe(JavelinResultsListener.TOPIC, panel::updateResults);
+                .subscribe(JavelinResultsListener.TOPIC, results -> {
+                    resultsPanel.updateResults(results);
+                    configPanel.setRunning(false);
+                });
 
-        Content content = ContentFactory.getInstance().createContent(panel, "Results", false);
+        OnePixelSplitter splitPane = new OnePixelSplitter(false, 0.25f);
+        splitPane.setFirstComponent(configPanel);
+        splitPane.setSecondComponent(resultsPanel);
+
+        Content content = ContentFactory.getInstance().createContent(splitPane, "", false);
+        content.setPreferredFocusableComponent(resultsPanel);
         toolWindow.getContentManager().addContent(content);
 
         List<com.intellij.openapi.actionSystem.AnAction> titleActions = new ArrayList<>();
