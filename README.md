@@ -1,4 +1,4 @@
-# Javelin — IntelliJ IDEA Plugin
+# Javelin Plugin for IntelliJ IDEA
 
 An IntelliJ IDEA plugin for **Spectrum-Based Fault Localization (SBFL)** of Java projects. Javelin analyzes test pass/fail data and code coverage to rank lines of code by suspiciousness, helping you find bugs faster — directly inside your IDE.
 
