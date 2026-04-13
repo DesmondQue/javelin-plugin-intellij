@@ -3,6 +3,7 @@ package com.javelin.plugin.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Graphics;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -13,6 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,8 +29,11 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JTable;
+import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
@@ -43,9 +49,14 @@ import com.intellij.openapi.vfs.VirtualFileWrapper;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.ui.ColoredTreeCellRenderer;
+import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
-import com.intellij.ui.treeStructure.Tree;
+import com.intellij.ui.treeStructure.treetable.ListTreeTableModelOnColumns;
+import com.intellij.ui.treeStructure.treetable.TreeTable;
+import com.intellij.ui.treeStructure.treetable.TreeTableModel;
+import com.intellij.util.ui.ColumnInfo;
 import com.javelin.plugin.model.FaultLocalizationResult;
 import com.javelin.plugin.model.RankGroup;
 import com.javelin.plugin.service.JavelinService;
@@ -53,50 +64,36 @@ import com.javelin.plugin.service.JavelinService;
 public final class ResultsPanel extends JPanel {
 
     private final Project project;
-    private final Tree tree;
     private final DefaultMutableTreeNode rootNode;
     private final JBTextField filterField;
     private final JLabel statusLabel;
+    private TreeTable treeTable;
+    private ListTreeTableModelOnColumns treeTableModel;
     private boolean allExpanded = false;
     private List<FaultLocalizationResult> currentResults = List.of();
     private List<RankGroup> currentGroups = List.of();
+
+    /** Column index currently used for sorting (-1 = default rank order). */
+    private int sortColumn = -1;
+    /** true = ascending, false = descending. */
+    private boolean sortAscending = true;
+
+    private static final ColumnInfo<DefaultMutableTreeNode, ?>[] COLUMNS = createColumns();
 
     public ResultsPanel(Project project) {
         super(new BorderLayout());
         this.project = project;
 
         this.rootNode = new DefaultMutableTreeNode("Results");
-        this.tree = new Tree(rootNode) {
-            @Override
-            public String getToolTipText(MouseEvent event) {
-                TreePath path = getPathForLocation(event.getX(), event.getY());
-                if (path == null) {
-                    return null;
-                }
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-                Object userObj = node.getUserObject();
-                if (userObj instanceof RankGroup group) {
-                    JavelinHighlightProvider.SuspicionBand band = resolveBandForRank(group.rank());
-                    return "<html><b>Rank " + group.rank() + "</b>"
-                            + "<br/>Score: " + String.format(Locale.ROOT, "%.6f", group.score())
-                            + "<br/>Lines: " + group.lines().size()
-                            + "<br/>Top-N: " + group.topN()
-                            + "<br/>Band: " + band.name() + " - " + band.description()
-                            + "</html>";
-                } else if (userObj instanceof FaultLocalizationResult result) {
-                    String filePath = result.fullyQualifiedClass().replace('.', '/') + ".java";
-                    return "<html><b>File:</b> " + filePath
-                            + "<br/><b>Line:</b> " + result.lineNumber()
-                            + "<br/><b>Score:</b> " + String.format(Locale.ROOT, "%.6f", result.score())
-                            + "</html>";
-                }
-                return null;
-            }
-        };
-        this.tree.setRootVisible(false);
-        this.tree.setShowsRootHandles(true);
-        this.tree.getSelectionModel().setSelectionMode(javax.swing.tree.TreeSelectionModel.SINGLE_TREE_SELECTION);
-        this.tree.setCellRenderer(new RankTreeCellRenderer());
+        this.treeTableModel = new ListTreeTableModelOnColumns(rootNode, COLUMNS);
+        this.treeTable = new TreeTable(treeTableModel);
+        this.treeTable.setRootVisible(false);
+        this.treeTable.getTree().setShowsRootHandles(true);
+        this.treeTable.getTree().setRootVisible(false);
+        this.treeTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        this.treeTable.setTreeCellRenderer(new RankTreeCellRenderer());
+        this.treeTable.setDefaultRenderer(String.class, new BandAwareTableCellRenderer());
+        this.treeTable.setDefaultRenderer(Integer.class, new BandAwareTableCellRenderer());
 
         this.filterField = new JBTextField();
         this.filterField.getEmptyText().setText("Filter by class name");
@@ -132,10 +129,12 @@ public final class ResultsPanel extends JPanel {
         topRight.add(clearResultsButton, BorderLayout.EAST);
 
         JPanel top = new JPanel(new BorderLayout(6, 0));
+        top.setBorder(com.intellij.util.ui.JBUI.Borders.empty(6, 8, 4, 8));
         top.add(filterField, BorderLayout.CENTER);
         top.add(topRight, BorderLayout.EAST);
 
         JPanel bottom = new JPanel(new BorderLayout());
+        bottom.setBorder(com.intellij.util.ui.JBUI.Borders.empty(4, 8, 6, 8));
         this.statusLabel = new JLabel("No results - run Javelin Analysis first");
         bottom.add(statusLabel, BorderLayout.WEST);
 
@@ -145,10 +144,94 @@ public final class ResultsPanel extends JPanel {
 
         installNavigationHandlers();
         installContextMenu();
+        installHeaderSortHandler();
 
         add(top, BorderLayout.NORTH);
-        add(new JBScrollPane(tree), BorderLayout.CENTER);
+        add(new JBScrollPane(treeTable), BorderLayout.CENTER);
         add(bottom, BorderLayout.SOUTH);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ColumnInfo<DefaultMutableTreeNode, ?>[] createColumns() {
+        ColumnInfo<DefaultMutableTreeNode, String> nameColumn = new ColumnInfo<>("Name") {
+            @Override
+            public String valueOf(DefaultMutableTreeNode node) {
+                return null; // rendered by TreeCellRenderer
+            }
+
+            @Override
+            public Class<?> getColumnClass() {
+                return TreeTableModel.class;
+            }
+        };
+
+        ColumnInfo<DefaultMutableTreeNode, Integer> lineColumn = new ColumnInfo<>("Line") {
+            @Override
+            public Integer valueOf(DefaultMutableTreeNode node) {
+                if (node.getUserObject() instanceof FaultLocalizationResult result) {
+                    return result.lineNumber();
+                }
+                return null;
+            }
+
+            @Override
+            public Class<?> getColumnClass() {
+                return Integer.class;
+            }
+
+            @Override
+            public int getWidth(JTable table) {
+                return 60;
+            }
+        };
+
+        ColumnInfo<DefaultMutableTreeNode, String> scoreColumn = new ColumnInfo<>("Score") {
+            @Override
+            public String valueOf(DefaultMutableTreeNode node) {
+                Object userObj = node.getUserObject();
+                if (userObj instanceof RankGroup group) {
+                    return String.format(Locale.ROOT, "%.6f", group.score());
+                } else if (userObj instanceof FaultLocalizationResult result) {
+                    return String.format(Locale.ROOT, "%.6f", result.score());
+                }
+                return "";
+            }
+
+            @Override
+            public int getWidth(JTable table) {
+                return 90;
+            }
+        };
+
+        ColumnInfo<DefaultMutableTreeNode, String> bandColumn = new ColumnInfo<>("Band") {
+            @Override
+            public String valueOf(DefaultMutableTreeNode node) {
+                // value is resolved by the renderer; return band name for sorting/accessibility
+                return "";
+            }
+
+            @Override
+            public int getWidth(JTable table) {
+                return 90;
+            }
+        };
+
+        ColumnInfo<DefaultMutableTreeNode, String> topNColumn = new ColumnInfo<>("Top-N") {
+            @Override
+            public String valueOf(DefaultMutableTreeNode node) {
+                if (node.getUserObject() instanceof RankGroup group) {
+                    return String.valueOf(group.topN());
+                }
+                return "";
+            }
+
+            @Override
+            public int getWidth(JTable table) {
+                return 60;
+            }
+        };
+
+        return new ColumnInfo[]{nameColumn, lineColumn, scoreColumn, bandColumn, topNColumn};
     }
 
     public void updateResults(List<FaultLocalizationResult> results) {
@@ -203,9 +286,10 @@ public final class ResultsPanel extends JPanel {
             }
             rootNode.add(groupNode);
         }
-        ((javax.swing.tree.DefaultTreeModel) tree.getModel()).reload();
+        treeTableModel.reload();
 
         // Auto-expand the first 3 rank groups
+        JTree tree = treeTable.getTree();
         int expandCount = Math.min(3, rootNode.getChildCount());
         for (int i = 0; i < expandCount; i++) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) rootNode.getChildAt(i);
@@ -217,7 +301,68 @@ public final class ResultsPanel extends JPanel {
         rebuildTree(currentGroups);
     }
 
+    private void installHeaderSortHandler() {
+        treeTable.getTableHeader().addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int viewCol = treeTable.columnAtPoint(e.getPoint());
+                if (viewCol < 0) {
+                    return;
+                }
+                int modelCol = treeTable.convertColumnIndexToModel(viewCol);
+                // Sortable columns: 0=Name, 1=Line, 2=Score
+                if (modelCol < 0 || modelCol > 2) {
+                    return;
+                }
+                if (sortColumn == modelCol) {
+                    sortAscending = !sortAscending;
+                } else {
+                    sortColumn = modelCol;
+                    // Score defaults to descending (highest first), others ascending
+                    sortAscending = modelCol != 2;
+                }
+                applySortAndRebuild();
+                updateHeaderSortIndicators();
+            }
+        });
+    }
+
+    private void updateHeaderSortIndicators() {
+        javax.swing.table.JTableHeader header = treeTable.getTableHeader();
+        for (int i = 0; i < treeTable.getColumnCount(); i++) {
+            int modelIdx = treeTable.convertColumnIndexToModel(i);
+            String baseName = COLUMNS[modelIdx].getName();
+            if (modelIdx == sortColumn) {
+                String arrow = sortAscending ? " \u25B2" : " \u25BC";
+                treeTable.getColumnModel().getColumn(i).setHeaderValue(baseName + arrow);
+            } else {
+                treeTable.getColumnModel().getColumn(i).setHeaderValue(baseName);
+            }
+        }
+        header.repaint();
+    }
+
+    private void applySortAndRebuild() {
+        if (currentResults.isEmpty()) {
+            return;
+        }
+        List<FaultLocalizationResult> sorted = new ArrayList<>(currentResults);
+        Comparator<FaultLocalizationResult> cmp = switch (sortColumn) {
+            case 0 -> Comparator.comparing(FaultLocalizationResult::fullyQualifiedClass, String.CASE_INSENSITIVE_ORDER);
+            case 1 -> Comparator.comparingInt(FaultLocalizationResult::lineNumber);
+            case 2 -> Comparator.comparingDouble(FaultLocalizationResult::score);
+            default -> Comparator.comparingInt(FaultLocalizationResult::rank);
+        };
+        if (!sortAscending) {
+            cmp = cmp.reversed();
+        }
+        sorted.sort(cmp);
+        currentGroups = buildRankGroups(sorted);
+        rebuildTree(currentGroups);
+    }
+
     private void expandAll() {
+        JTree tree = treeTable.getTree();
         for (int i = 0; i < rootNode.getChildCount(); i++) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) rootNode.getChildAt(i);
             tree.expandPath(new TreePath(child.getPath()));
@@ -225,6 +370,7 @@ public final class ResultsPanel extends JPanel {
     }
 
     private void collapseAll() {
+        JTree tree = treeTable.getTree();
         for (int i = rootNode.getChildCount() - 1; i >= 0; i--) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) rootNode.getChildAt(i);
             tree.collapsePath(new TreePath(child.getPath()));
@@ -248,7 +394,7 @@ public final class ResultsPanel extends JPanel {
     }
 
     private void installNavigationHandlers() {
-        tree.addMouseListener(new MouseAdapter() {
+        treeTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
@@ -257,8 +403,8 @@ public final class ResultsPanel extends JPanel {
             }
         });
 
-        tree.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "navigate-javelin-result");
-        tree.getActionMap().put("navigate-javelin-result", new AbstractAction() {
+        treeTable.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "navigate-javelin-result");
+        treeTable.getActionMap().put("navigate-javelin-result", new AbstractAction() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 navigateFromSelectedNode();
@@ -281,16 +427,24 @@ public final class ResultsPanel extends JPanel {
         copyAllItem.addActionListener(e -> copyAllRows());
         menu.add(copyAllItem);
 
-        tree.setComponentPopupMenu(menu);
+        treeTable.setComponentPopupMenu(menu);
     }
 
-    private FaultLocalizationResult getSelectedResult() {
-        TreePath path = tree.getSelectionPath();
+    private DefaultMutableTreeNode getSelectedTreeNode() {
+        int row = treeTable.getSelectedRow();
+        if (row < 0) {
+            return null;
+        }
+        TreePath path = treeTable.getTree().getPathForRow(row);
         if (path == null) {
             return null;
         }
-        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-        if (node.getUserObject() instanceof FaultLocalizationResult result) {
+        return (DefaultMutableTreeNode) path.getLastPathComponent();
+    }
+
+    private FaultLocalizationResult getSelectedResult() {
+        DefaultMutableTreeNode node = getSelectedTreeNode();
+        if (node != null && node.getUserObject() instanceof FaultLocalizationResult result) {
             return result;
         }
         return null;
@@ -314,18 +468,17 @@ public final class ResultsPanel extends JPanel {
     }
 
     private void copySelectedNode() {
-        TreePath path = tree.getSelectionPath();
-        if (path == null) {
+        DefaultMutableTreeNode node = getSelectedTreeNode();
+        if (node == null) {
             return;
         }
-        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
         Object userObj = node.getUserObject();
         if (userObj instanceof FaultLocalizationResult result) {
             copyToClipboard(result.fullyQualifiedClass() + ":" + result.lineNumber()
                     + " (" + String.format(Locale.ROOT, "%.6f", result.score()) + ")");
         } else if (userObj instanceof RankGroup group) {
-            copyToClipboard("Rank " + group.rank() + " — Score: "
-                    + String.format(Locale.ROOT, "%.6f", group.score()) + " — " + group.lines().size() + " lines");
+            copyToClipboard("Rank " + group.rank() + " \u2014 Score: "
+                    + String.format(Locale.ROOT, "%.6f", group.score()) + " \u2014 " + group.lines().size() + " lines");
         }
     }
 
@@ -400,81 +553,106 @@ public final class ResultsPanel extends JPanel {
         return ((double) result.rank() / (double) Math.max(1, maxRank)) * 100.0;
     }
 
-    private final class RankTreeCellRenderer extends javax.swing.tree.DefaultTreeCellRenderer {
-        private final Color defaultSelectionColor = getBackgroundSelectionColor();
-
+    /** Tree column renderer (column 0) — uses ColoredTreeCellRenderer for rich text. */
+    private final class RankTreeCellRenderer extends ColoredTreeCellRenderer {
         @Override
-        public Component getTreeCellRendererComponent(
-                javax.swing.JTree jTree,
-                Object value,
-                boolean sel,
-                boolean expanded,
-                boolean leaf,
-                int row,
-                boolean hasFocus
+        public void customizeCellRenderer(
+                JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus
         ) {
-            // Reset to defaults before each render to prevent bleed
-            setBackgroundSelectionColor(defaultSelectionColor);
-            setBackgroundNonSelectionColor(null);
-            setOpaque(false);
+            if (!(value instanceof DefaultMutableTreeNode node)) {
+                return;
+            }
+            Object userObj = node.getUserObject();
+            if (userObj instanceof RankGroup group) {
+                String lineWord = group.lines().size() == 1 ? "line" : "lines";
+                append("Rank " + group.rank(), SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES);
+                append("  " + group.lines().size() + " " + lineWord, SimpleTextAttributes.GRAYED_ATTRIBUTES);
+                setToolTipText("<html><b>Rank " + group.rank() + "</b>"
+                        + "<br/>Score: " + String.format(Locale.ROOT, "%.6f", group.score())
+                        + "<br/>Lines: " + group.lines().size()
+                        + "<br/>Top-N: " + group.topN()
+                        + "</html>");
+            } else if (userObj instanceof FaultLocalizationResult result) {
+                String simpleName = result.fullyQualifiedClass();
+                int lastDot = simpleName.lastIndexOf('.');
+                if (lastDot >= 0) {
+                    simpleName = simpleName.substring(lastDot + 1);
+                }
+                append(simpleName, SimpleTextAttributes.REGULAR_ATTRIBUTES);
+                setToolTipText("<html><b>File:</b> " + result.fullyQualifiedClass().replace('.', '/') + ".java"
+                        + "<br/><b>Line:</b> " + result.lineNumber()
+                        + "<br/><b>Score:</b> " + String.format(Locale.ROOT, "%.6f", result.score())
+                        + "</html>");
+            }
+        }
+    }
 
-            Component component = super.getTreeCellRendererComponent(jTree, value, sel, expanded, leaf, row, hasFocus);
-            if (value instanceof DefaultMutableTreeNode node) {
-                Object userObj = node.getUserObject();
+    /** Renderer for non-tree columns — draws a band color chip in the Band column. */
+    private final class BandAwareTableCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(
+                JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column
+        ) {
+            Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            // Resolve the node for this row
+            TreePath path = treeTable.getTree().getPathForRow(row);
+            if (path == null) {
+                return comp;
+            }
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+            Object userObj = node.getUserObject();
+
+            // Determine which model column this is
+            int modelCol = treeTable.convertColumnIndexToModel(column);
+
+            // Band column (index 3) — show colored chip + label
+            if (modelCol == 3) {
+                JavelinHighlightProvider.SuspicionBand band = null;
                 if (userObj instanceof RankGroup group) {
-                    String lineWord = group.lines().size() == 1 ? "line" : "lines";
-                    setText("Rank " + group.rank() + " \u2014 Score: "
-                            + String.format(Locale.ROOT, "%.4f", group.score()) + " \u2014 "
-                            + group.lines().size() + " " + lineWord + " \u2014 Top-N: " + group.topN());
-                    setIcon(null);
-                    JavelinHighlightProvider.SuspicionBand band = resolveBandForRank(group.rank());
-                    Color bandColor = switch (band) {
-                        case RED -> new Color(0xD3, 0x2F, 0x2F, 35);
-                        case ORANGE -> new Color(0xF5, 0x7C, 0x00, 30);
-                        case YELLOW -> new Color(0xFB, 0xC0, 0x2D, 25);
-                        case GREEN -> new Color(0x38, 0x8E, 0x3C, 20);
-                    };
-                    if (sel) {
-                        setBackgroundSelectionColor(blendColors(defaultSelectionColor, bandColor));
-                    } else {
-                        setBackgroundNonSelectionColor(bandColor);
-                    }
-                    setOpaque(true);
+                    band = resolveBandForRank(group.rank());
                 } else if (userObj instanceof FaultLocalizationResult result) {
-                    String simpleName = result.fullyQualifiedClass();
-                    int lastDot = simpleName.lastIndexOf('.');
-                    if (lastDot >= 0) {
-                        simpleName = simpleName.substring(lastDot + 1);
-                    }
-                    setText(simpleName + " : " + result.lineNumber());
-                    setIcon(null);
-                    JavelinHighlightProvider.SuspicionBand band = resolveBand(result);
-                    Color bandColor = switch (band) {
-                        case RED -> new Color(0xD3, 0x2F, 0x2F, 35);
-                        case ORANGE -> new Color(0xF5, 0x7C, 0x00, 30);
-                        case YELLOW -> new Color(0xFB, 0xC0, 0x2D, 25);
-                        case GREEN -> new Color(0x38, 0x8E, 0x3C, 20);
-                    };
-                    if (sel) {
-                        setBackgroundSelectionColor(blendColors(defaultSelectionColor, bandColor));
-                    } else {
-                        setBackgroundNonSelectionColor(bandColor);
-                    }
-                    setOpaque(true);
+                    band = resolveBand(result);
+                }
+                if (band != null) {
+                    setText(band.name());
+                    final JavelinHighlightProvider.SuspicionBand finalBand = band;
+                    return new BandChipLabel(finalBand, getText(), isSelected,
+                            table.getSelectionBackground(), table.getSelectionForeground(),
+                            table.getBackground(), table.getForeground());
                 }
             }
-            return component;
+            return comp;
+        }
+    }
+
+    /** A small JLabel that draws a colored square chip before the band name. */
+    private static final class BandChipLabel extends JLabel {
+        private final Color chipColor;
+
+        BandChipLabel(JavelinHighlightProvider.SuspicionBand band, String text,
+                      boolean selected, Color selBg, Color selFg, Color bg, Color fg) {
+            // Indent text to leave room for the chip
+            setText("    " + text);
+            this.chipColor = band.color();
+            setOpaque(true);
+            if (selected) {
+                setBackground(selBg);
+                setForeground(selFg);
+            } else {
+                setBackground(bg);
+                setForeground(fg);
+            }
         }
 
-        private Color blendColors(Color base, Color overlay) {
-            if (base == null) {
-                return overlay;
-            }
-            float alpha = overlay.getAlpha() / 255f;
-            int r = (int) (base.getRed() * (1 - alpha) + overlay.getRed() * alpha);
-            int g = (int) (base.getGreen() * (1 - alpha) + overlay.getGreen() * alpha);
-            int b = (int) (base.getBlue() * (1 - alpha) + overlay.getBlue() * alpha);
-            return new Color(Math.min(r, 255), Math.min(g, 255), Math.min(b, 255));
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            // Draw a 10x10 filled square chip at (4, center-y)
+            int chipSize = 10;
+            int y = (getHeight() - chipSize) / 2;
+            g.setColor(chipColor);
+            g.fillRect(4, y, chipSize, chipSize);
         }
     }
 }

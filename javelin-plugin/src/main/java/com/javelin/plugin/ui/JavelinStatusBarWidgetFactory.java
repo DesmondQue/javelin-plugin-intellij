@@ -1,26 +1,16 @@
 package com.javelin.plugin.ui;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JSeparator;
-import javax.swing.JSpinner;
-import javax.swing.SpinnerNumberModel;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -34,22 +24,17 @@ import com.intellij.openapi.projectRoots.JavaSdkVersion;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.CompilerModuleExtension;
 import com.intellij.openapi.roots.ProjectRootManager;
-import com.intellij.openapi.ui.ComboBox;
-import com.intellij.openapi.ui.popup.JBPopup;
-import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.CustomStatusBarWidget;
 import com.intellij.openapi.wm.StatusBar;
 import com.intellij.openapi.wm.StatusBarWidget;
 import com.intellij.openapi.wm.StatusBarWidgetFactory;
-import com.intellij.ui.awt.RelativePoint;
+import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.util.ui.JBUI;
-import com.javelin.plugin.actions.RunJavelinAction;
-import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.service.JavelinService;
 
 public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFactory {
-
 
     private static final String WIDGET_ID = "Javelin.Status";
 
@@ -88,15 +73,13 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
             this.label = new JLabel();
             this.label.setBorder(JBUI.Borders.empty(0, 6));
             this.label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            this.label.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    // Could trigger popup here if desired, but sticking to click for controls
-                    // and tooltip for status info per user request for "hover visibility"
-                }
+            this.label.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    showPopup(e);
+                    ToolWindow tw = ToolWindowManager.getInstance(project).getToolWindow("Javelin");
+                    if (tw != null) {
+                        tw.show();
+                    }
                 }
             });
 
@@ -134,162 +117,87 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
             return new Widget(project);
         }
 
-        private void refresh() {
-            Readiness readiness = computeReadiness();
-            label.setText(readiness.labelText());
-            label.setToolTipText(readiness.tooltipText());
+        public void refresh() {
+            JavelinService service = project.getService(JavelinService.class);
+            boolean running = service != null && service.isRunning();
+            List<Requirement> reqs = computeRequirements();
+            boolean ready = reqs.stream().allMatch(r -> r.ok);
+
+            // Label
+            if (running) {
+                label.setText("Javelin \u21BB");
+            } else if (ready) {
+                label.setText("Javelin \u2713");
+            } else {
+                long failCount = reqs.stream().filter(r -> !r.ok).count();
+                label.setText(failCount == reqs.size() ? "Javelin \u2013" : "Javelin !");
+            }
+
+            // Tooltip
+            StringBuilder sb = new StringBuilder("<html><body style='width:320px'><b>Javelin Status</b><br><hr><br>");
+            if (running) {
+                sb.append("<br><b>\u21BB Analysis running\u2026</b><br>");
+            }
+            for (Requirement req : reqs) {
+                sb.append(req.ok
+                        ? "<span style='color:#388E3C'>\u2713</span> "
+                        : "<span style='color:#D32F2F'>\u2717</span> ");
+                sb.append(req.name).append(": ").append(req.details).append("<br>");
+            }
+            // Last run summary
+            if (service != null && service.getLastRunDurationNanos() > 0) {
+                double seconds = service.getLastRunDurationNanos() / 1_000_000_000.0;
+                int resultCount = service.getLastResults() == null ? 0 : service.getLastResults().size();
+                sb.append("<br><b>Last run:</b> ")
+                        .append(String.format(Locale.ROOT, "%.2fs", seconds))
+                        .append(" \u2014 ").append(resultCount).append(" suspicious lines<br>");
+            }
+            sb.append("</body></html>");
+            label.setToolTipText(sb.toString());
+
             if (statusBar != null) {
                 statusBar.updateWidget(ID());
             }
         }
 
-        private void showPopup(MouseEvent event) {
-            Readiness readiness = computeReadiness();
-            JPanel panel = new JPanel(new BorderLayout(0, 6));
-            panel.setBorder(JBUI.Borders.empty(10));
-
-            // Header: "Javelin Status" + separator
-            JPanel headerPanel = new JPanel(new BorderLayout(0, 4));
-            JLabel titleLabel = new JLabel("Javelin Status");
-            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, titleLabel.getFont().getSize() + 1f));
-            headerPanel.add(titleLabel, BorderLayout.NORTH);
-            headerPanel.add(new JSeparator(), BorderLayout.SOUTH);
-
-            // Checklist with colored check/cross marks
-            JPanel checklist = new JPanel(new GridBagLayout());
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.gridx = 0;
-            gbc.gridy = 0;
-            gbc.anchor = GridBagConstraints.WEST;
-            gbc.insets = new Insets(2, 2, 2, 2);
-
-            for (Requirement req : readiness.requirements) {
-                String mark = req.ok
-                    ? "<html><span style='color:#388E3C'>\u2713</span> "
-                    : "<html><span style='color:#D32F2F'>\u2717</span> ";
-                checklist.add(new JLabel(mark + req.name + " - " + req.details + "</html>"), gbc);
-                gbc.gridy++;
-            }
-
-            // Controls
-            JPanel controls = new JPanel(new GridBagLayout());
-            GridBagConstraints cgbc = new GridBagConstraints();
-            cgbc.gridy = 0;
-            cgbc.anchor = GridBagConstraints.WEST;
-            cgbc.insets = new Insets(2, 2, 2, 4);
-
-            ComboBox<String> algorithmCombo = new ComboBox<>(new String[]{"ochiai", "ochiai-ms"});
-            algorithmCombo.setSelectedItem(JavelinUiSettings.getAlgorithm(project));
-            algorithmCombo.addActionListener(e -> {
-                Object selected = algorithmCombo.getSelectedItem();
-                if (selected != null) {
-                    JavelinUiSettings.setAlgorithm(project, selected.toString());
-                }
-            });
-
-            int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
-            JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(JavelinUiSettings.getMaxThreads(project), 1, maxThreads, 1));
-            threadsSpinner.addChangeListener(e -> JavelinUiSettings.setMaxThreads(project, (Integer) threadsSpinner.getValue()));
-
-            boolean isRunning = project.getService(JavelinService.class).isRunning();
-            algorithmCombo.setEnabled(!isRunning);
-            threadsSpinner.setEnabled(!isRunning);
-
-            cgbc.gridx = 0; controls.add(new JLabel("Algorithm:"), cgbc);
-            cgbc.gridx = 1; controls.add(algorithmCombo, cgbc);
-            cgbc.gridy = 1;
-            cgbc.gridx = 0; controls.add(new JLabel("Threads:"), cgbc);
-            cgbc.gridx = 1; controls.add(threadsSpinner, cgbc);
-
-            JCheckBox offlineCheckbox = new JCheckBox("Offline mode");
-            offlineCheckbox.setToolTipText("Force offline bytecode instrumentation (for mockito-inline, bytebuddy-agent, etc.)");
-            offlineCheckbox.setEnabled(!isRunning);
-            cgbc.gridy = 2;
-            cgbc.gridx = 0; cgbc.gridwidth = 2; controls.add(offlineCheckbox, cgbc);
-            cgbc.gridwidth = 1;
-
-            // Run button - green when ready, grey when disabled
-            JButton runButton = new JButton("Run Javelin Analysis");
-            runButton.setEnabled(readiness.ready && !isRunning);
-            runButton.setOpaque(true);
-            runButton.setBorderPainted(readiness.ready && !isRunning);
-            if (isRunning) {
-                runButton.setText("Analysis Running...");
-                runButton.setToolTipText("Javelin analysis is in progress");
-            } else if (readiness.ready) {
-                runButton.setBackground(new Color(0x38, 0x8E, 0x3C));
-                runButton.setForeground(Color.WHITE);
-            } else {
-                runButton.setToolTipText(readiness.firstFailure());
-            }
-            runButton.addActionListener(e -> {
-                String algorithm = JavelinUiSettings.getAlgorithm(project);
-                int threads = JavelinUiSettings.getMaxThreads(project);
-                RunJavelinAction.runAnalysis(project, algorithm, threads,
-                        null, null, null, null, offlineCheckbox.isSelected());
-            });
-
-            // Bottom: controls + run button
-            JPanel bottomPanel = new JPanel(new BorderLayout(0, 6));
-            bottomPanel.add(controls, BorderLayout.NORTH);
-            bottomPanel.add(runButton, BorderLayout.SOUTH);
-
-            panel.add(headerPanel, BorderLayout.NORTH);
-            panel.add(checklist, BorderLayout.CENTER);
-            panel.add(bottomPanel, BorderLayout.SOUTH);
-
-            JBPopup popup = JBPopupFactory.getInstance()
-                    .createComponentPopupBuilder(panel, null)
-                    .setFocusable(true)
-                    .setRequestFocus(true)
-                    .createPopup();
-
-            int yOffset = -(panel.getPreferredSize().height + 20);
-            popup.show(new RelativePoint(label, new java.awt.Point(0, yOffset)));
-            refresh();
-        }
-
-        private Readiness computeReadiness() {
+        private List<Requirement> computeRequirements() {
             List<Requirement> requirements = new ArrayList<>();
             JavelinService service = project.getService(JavelinService.class);
 
             boolean hasJavaModule = hasJavaModule(project);
-            requirements.add(new Requirement("Java Module Detected", hasJavaModule,
-                    hasJavaModule ? "At least one Java module is available" : "No Java module found in this project"));
+            requirements.add(new Requirement("Java Module", hasJavaModule,
+                    hasJavaModule ? "Detected" : "No Java module found"));
 
             boolean mainClasses = hasCompiledMainClasses(project);
-            requirements.add(new Requirement("Compiled Main Classes", mainClasses,
-                    mainClasses ? "Main output contains .class files" : "Build the project to generate main classes"));
+            requirements.add(new Requirement("Main Classes", mainClasses,
+                    mainClasses ? "Compiled" : "Build project first"));
 
             boolean testClasses = hasCompiledTestClasses(project);
-            requirements.add(new Requirement("Compiled Test Classes", testClasses,
-                    testClasses ? "Test output contains .class files" : "Build tests to generate test classes"));
+            requirements.add(new Requirement("Test Classes", testClasses,
+                    testClasses ? "Compiled" : "Build tests first"));
 
             Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
             boolean javaOk = false;
             String javaDetails;
             if (projectSdk == null) {
-                javaDetails = "No project SDK configured";
+                javaDetails = "No SDK configured";
             } else {
                 JavaSdkVersion sdkVersion = JavaSdk.getInstance().getVersion(projectSdk);
                 if (sdkVersion == null) {
-                    javaDetails = "SDK is not a Java SDK: " + projectSdk.getName();
+                    javaDetails = "Not a Java SDK";
                 } else {
                     int feature = sdkVersion.getMaxLanguageLevel().toJavaVersion().feature;
-                    javaOk = feature >= 17 && feature <= 21;
-                    javaDetails = javaOk
-                        ? "Project SDK: " + projectSdk.getName() + " (Java " + feature + ")"
-                        : "Project SDK Java " + feature + " is outside 17–21 range";
+                    javaOk = feature >= 8;
+                    javaDetails = javaOk ? "Java " + feature : "Java " + feature + " (need 8+)";
                 }
             }
-            requirements.add(new Requirement("Java 17–21 Project SDK", javaOk, javaDetails));
+            requirements.add(new Requirement("JDK", javaOk, javaDetails));
 
-            boolean coreJar = service.isCoreJarAvailable();
-            requirements.add(new Requirement("javelin-core Available", coreJar,
-                    coreJar ? "javelin-core-all.jar resolved" : "Build javelin-core so the plugin can locate the JAR"));
+            boolean coreJar = service != null && service.isCoreJarAvailable();
+            requirements.add(new Requirement("javelin-core", coreJar,
+                    coreJar ? "Available" : "JAR not found"));
 
-            boolean ready = requirements.stream().allMatch(r -> r.ok);
-            return new Readiness(requirements, ready);
+            return requirements;
         }
 
         private static boolean hasJavaModule(Project project) {
@@ -304,49 +212,35 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
         private static boolean hasCompiledMainClasses(Project project) {
             for (Module module : ModuleManager.getInstance(project).getModules()) {
                 CompilerModuleExtension ext = CompilerModuleExtension.getInstance(module);
-                if (ext == null) {
-                    continue;
-                }
+                if (ext == null) continue;
                 String outputUrl = ext.getCompilerOutputUrl();
                 if (outputUrl != null && hasClassFiles(Path.of(com.intellij.openapi.vfs.VirtualFileManager.extractPath(outputUrl)))) {
                     return true;
                 }
             }
             String base = project.getBasePath();
-            if (base == null) {
-                return false;
-            }
-            if (hasClassFiles(Path.of(base).resolve("build").resolve("classes").resolve("java").resolve("main"))) {
-                return true;
-            }
+            if (base == null) return false;
+            if (hasClassFiles(Path.of(base).resolve("build").resolve("classes").resolve("java").resolve("main"))) return true;
             return hasClassFiles(Path.of(base).resolve("target").resolve("classes"));
         }
 
         private static boolean hasCompiledTestClasses(Project project) {
             for (Module module : ModuleManager.getInstance(project).getModules()) {
                 CompilerModuleExtension ext = CompilerModuleExtension.getInstance(module);
-                if (ext == null) {
-                    continue;
-                }
+                if (ext == null) continue;
                 String outputUrl = ext.getCompilerOutputUrlForTests();
                 if (outputUrl != null && hasClassFiles(Path.of(com.intellij.openapi.vfs.VirtualFileManager.extractPath(outputUrl)))) {
                     return true;
                 }
             }
             String base = project.getBasePath();
-            if (base == null) {
-                return false;
-            }
-            if (hasClassFiles(Path.of(base).resolve("build").resolve("classes").resolve("java").resolve("test"))) {
-                return true;
-            }
+            if (base == null) return false;
+            if (hasClassFiles(Path.of(base).resolve("build").resolve("classes").resolve("java").resolve("test"))) return true;
             return hasClassFiles(Path.of(base).resolve("target").resolve("test-classes"));
         }
 
         private static boolean hasClassFiles(Path path) {
-            if (!Files.isDirectory(path)) {
-                return false;
-            }
+            if (!Files.isDirectory(path)) return false;
             try (java.util.stream.Stream<Path> stream = Files.walk(path, 10)) {
                 return stream.anyMatch(p -> Files.isRegularFile(p) && p.getFileName().toString().endsWith(".class"));
             } catch (Exception ignored) {
@@ -356,33 +250,5 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
     }
 
     private record Requirement(String name, boolean ok, String details) {
-    }
-
-    private record Readiness(List<Requirement> requirements, boolean ready) {
-        private String labelText() {
-            if (ready) {
-                return "Javelin \u2713";
-            }
-            long failed = requirements.stream().filter(r -> !r.ok).count();
-            if (failed == requirements.size()) {
-                return "Javelin -";
-            }
-            return "Javelin !";
-        }
-
-        private String tooltipText() {
-            StringBuilder sb = new StringBuilder("<html><body><div style='width:325px'><b>Javelin Status</b><br><hr><br>");
-            for (Requirement req : requirements) {
-                sb.append(req.ok ? "<span style='color:#388E3C'>&#10003;</span> " : "<span style='color:#D32F2F'>&#10007;</span> ")
-                  .append(req.name).append(": ").append(req.details)
-                  .append("<br>");
-            }
-            sb.append("<br><i>Click to configure and run analysis</i></div></body></html>");
-            return sb.toString();
-        }
-
-        private String firstFailure() {
-            return requirements.stream().filter(r -> !r.ok).findFirst().map(Requirement::details).orElse("Javelin is ready");
-        }
     }
 }

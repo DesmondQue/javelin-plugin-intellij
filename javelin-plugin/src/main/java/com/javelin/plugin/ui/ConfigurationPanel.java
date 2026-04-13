@@ -41,7 +41,7 @@ public final class ConfigurationPanel extends JPanel {
     private final JCheckBox offlineCheckbox = new JCheckBox("Force offline mode");
     private final JButton runButton = new JButton("\u25B6 Run Javelin");
     private final JButton autoDetectButton = new JButton("Auto-Detect");
-    private final JBLabel sourceDirLabel = new JBLabel("Source directory*:");
+    private final JBLabel sourceDirLabel = new JBLabel("* Source directory:");
 
     public ConfigurationPanel(Project project) {
         super(new BorderLayout());
@@ -79,9 +79,9 @@ public final class ConfigurationPanel extends JPanel {
 
         JPanel formPanel = new JPanel(new GridBagLayout());
         int row = 0;
-        addRow(formPanel, "Target classes*:", targetField, row++);
-        addRow(formPanel, "Test classes*:", testField, row++);
-        addRow(formPanel, "Algorithm*:", algorithmCombo, row++);
+        addRow(formPanel, "* Target classes:", targetField, row++);
+        addRow(formPanel, "* Test classes:", testField, row++);
+        addRow(formPanel, "* Algorithm:", algorithmCombo, row++);
         addRow(formPanel, sourceDirLabel, sourceField, row++);
         addRow(formPanel, "Extra classpath:", classpathField, row++);
         addRow(formPanel, "Threads:", threadsSpinner, row++);
