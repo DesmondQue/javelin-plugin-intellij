@@ -16,7 +16,7 @@ Javelin wraps the [javelin-cli](https://github.com/DesmondQue/javelin-cli) engin
 | **Java project** | The project must be a compiled Java project with JUnit tests |
 | **At least 1 failing test** | SBFL requires at least one failing test to localize faults |
 
-> **Note:** The plugin bundles its own `javelin-core` engine. You do **not** need a separate JDK 21 installation — the plugin runs the engine using IntelliJ's bundled JBR (Java Runtime). The project being analyzed can use **Java 8 or later**. It currently has been tested on **Java 8, Java 11, Java 17, and Java 21** projects.
+> **Note:** The plugin bundles its own `javelin-core` engine. You do **not** need a separate JDK 21 installation, the plugin runs the engine using IntelliJ's bundled JBR (Java Runtime). The project being analyzed can use **Java 8 or later**. It currently has been tested on **Java 8, Java 11, Java 17, and Java 21** projects.
 
 ---
 
@@ -57,15 +57,15 @@ The distributable ZIP will be at `build/distributions/javelin-plugin-0.1.0.zip`.
 
 The Javelin tool window (bottom of the IDE) has a split layout:
 
-- **Left panel** — Configuration with auto-detected paths and manual overrides:
-  - **Target classes** — Compiled application classes directory
-  - **Test classes** — Compiled test classes directory
-  - **Source directory** — Java source root (required for Ochiai-MS)
-  - **Extra classpath** — Additional runtime dependencies (passed as `-c` to javelin-core)
-  - **Algorithm** — `ochiai` (default) or `ochiai-ms`
-  - **Threads** — Parallel test execution threads (defaults to CPU cores)
-  - **Offline mode** — Force offline bytecode instrumentation (for projects using mockito-inline, bytebuddy-agent, etc.)
-- **Right panel** — Results view (see below)
+- **Left panel** - Configuration with auto-detected paths and manual overrides:
+  - **Target classes** - Compiled application classes directory
+  - **Test classes** - Compiled test classes directory
+  - **Source directory** - Java source root (required for Ochiai-MS)
+  - **Extra classpath** - Additional runtime dependencies (passed as `-c` to javelin-core)
+  - **Algorithm** - `ochiai` (default) or `ochiai-ms`
+  - **Threads** - Parallel test execution threads (defaults to CPU cores)
+  - **Offline mode** - Force offline bytecode instrumentation (for projects using mockito-inline, bytebuddy-agent, etc.)
+- **Right panel** - Results view (see below)
 
 Fields marked with `*` are required. Paths are auto-detected on panel load (with a notification showing what was found) and can be overridden manually.
 
@@ -95,11 +95,11 @@ Results appear in a **TreeTable** grouped by rank:
 | **Top-N** | Cumulative position in ranked list |
 
 Features:
-- **Sort** — Click any column header to sort (▲ ascending / ▼ descending)
-- **Filter** — Type in the filter field to narrow by class name
-- **Navigate** — Double-click or press `Enter` to jump to the suspicious line in the editor
-- **Context menu** — Right-click for Copy and Export options
-- **Export** — Export filtered results to CSV via the bottom-right button
+- **Sort** - Click any column header to sort (▲ ascending / ▼ descending)
+- **Filter** - Type in the filter field to narrow by class name
+- **Navigate** - Double-click or press `Enter` to jump to the suspicious line in the editor
+- **Context menu** - Right-click for Copy and Export options
+- **Export** - Export filtered results to CSV via the bottom-right button
 
 ### Visual Indicators
 
@@ -113,10 +113,10 @@ Suspicious lines are highlighted directly in the editor using a 4-tier color sca
 | **Low** | Green | Lower-ranked lines |
 
 Visual features include:
-- **Line highlighting** — Background color on suspicious lines
-- **Gutter icons** — Colored dots in the left gutter
-- **Error stripe marks** — Colored markers on the right-side scrollbar
-- **Tooltips** — Hover over any indicator to see rank, score, and percentile
+- **Line highlighting** - Background color on suspicious lines
+- **Gutter icons** - Colored dots in the left gutter
+- **Error stripe marks** - Colored markers on the right-side scrollbar
+- **Tooltips** - Hover over any indicator to see rank, score, and percentile
 
 Each feature can be toggled from the Javelin tool window toolbar.
 
@@ -154,11 +154,11 @@ Both algorithms are available in the CLI ([javelin-cli](https://github.com/Desmo
 
 ## How It Works
 
-1. **Coverage Collection** — Runs JUnit tests with JaCoCo instrumentation to build per-test line coverage
-2. **Spectrum Analysis** — Constructs a hit matrix of which lines are executed by passing vs. failing tests
-3. **Suspiciousness Scoring** — Computes Ochiai (or Ochiai-MS) scores for each line
-4. **Ranking & Grouping** — Ranks lines by score and groups them by rank for display
-5. **Report Generation** — Exports ranked results to CSV and highlights them in the IDE
+1. **Coverage Collection** - Runs JUnit tests with JaCoCo instrumentation to build per-test line coverage
+2. **Spectrum Analysis** - Constructs a hit matrix of which lines are executed by passing vs. failing tests
+3. **Suspiciousness Scoring** - Computes Ochiai (or Ochiai-MS) scores for each line
+4. **Ranking & Grouping** - Ranks lines by score and groups them by rank for display
+5. **Report Generation** - Exports ranked results to CSV and highlights them in the IDE
 
 ---
 
