@@ -12,11 +12,11 @@ Javelin wraps the [javelin-cli](https://github.com/DesmondQue/javelin-cli) engin
 
 | Requirement | Details |
 |---|---|
-| **IntelliJ IDEA** | 2025.1 – 2025.3.x (Community or Ultimate) |
+| **IntelliJ IDEA** | 2025.1 (Minimum) - Community or Ultimate |
 | **Java project** | The project must be a compiled Java project with JUnit tests |
 | **At least 1 failing test** | SBFL requires at least one failing test to localize faults |
 
-> **Note:** The plugin bundles its own `javelin-core` engine. You do **not** need a separate JDK 21 installation — the plugin runs the engine using IntelliJ's bundled JBR (Java Runtime). The project being analyzed can use **Java 8 or later**.
+> **Note:** The plugin bundles its own `javelin-core` engine. You do **not** need a separate JDK 21 installation — the plugin runs the engine using IntelliJ's bundled JBR (Java Runtime). The project being analyzed can use **Java 8 or later**. It currently has been tested on Java 8, Java 11, Java 17, and Java 21 projects.
 
 ---
 
