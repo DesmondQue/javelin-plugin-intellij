@@ -35,6 +35,7 @@ public final class ConfigurationPanel extends JPanel {
     private final TextFieldWithBrowseButton testField = new TextFieldWithBrowseButton();
     private final TextFieldWithBrowseButton sourceField = new TextFieldWithBrowseButton();
     private final TextFieldWithBrowseButton classpathField = new TextFieldWithBrowseButton();
+    private final TextFieldWithBrowseButton jvmHomeField = new TextFieldWithBrowseButton();
     private final ComboBox<String> algorithmCombo = new ComboBox<>(new String[]{"ochiai", "ochiai-ms"});
     private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
@@ -65,6 +66,17 @@ public final class ConfigurationPanel extends JPanel {
         classpathDescriptor.setTitle("Extra Classpath");
         classpathField.addBrowseFolderListener(null, classpathDescriptor);
 
+        FileChooserDescriptor jvmHomeDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
+        jvmHomeDescriptor.setTitle("JVM Home Directory");
+        jvmHomeField.addBrowseFolderListener(null, jvmHomeDescriptor);
+        jvmHomeField.setText(JavelinUiSettings.getJvmHome(project));
+        jvmHomeField.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }
+            private void saveJvmHome() { JavelinUiSettings.setJvmHome(project, jvmHomeField.getText().trim()); }
+        });
+
         algorithmCombo.setSelectedItem(JavelinUiSettings.getAlgorithm(project));
         algorithmCombo.addActionListener(e -> {
             updateSourceDirVisibility();
@@ -84,6 +96,7 @@ public final class ConfigurationPanel extends JPanel {
         addRow(formPanel, "* Algorithm:", algorithmCombo, row++);
         addRow(formPanel, sourceDirLabel, sourceField, row++);
         addRow(formPanel, "Extra classpath:", classpathField, row++);
+        addRow(formPanel, "Override JVM home:", jvmHomeField, row++);
         addRow(formPanel, "Threads:", threadsSpinner, row++);
         addRow(formPanel, "", offlineCheckbox, row++);
 
@@ -198,6 +211,11 @@ public final class ConfigurationPanel extends JPanel {
         return offlineCheckbox.isSelected();
     }
 
+    public String getJvmHome() {
+        String text = jvmHomeField.getText().trim();
+        return text.isEmpty() ? null : text;
+    }
+
     public void setRunning(boolean running) {
         runButton.setEnabled(!running);
         autoDetectButton.setEnabled(!running);
@@ -208,6 +226,7 @@ public final class ConfigurationPanel extends JPanel {
         testField.setEnabled(!running);
         sourceField.setEnabled(!running);
         classpathField.setEnabled(!running);
+        jvmHomeField.setEnabled(!running);
         if (running) {
             runButton.setText("Analysis Running...");
         } else {

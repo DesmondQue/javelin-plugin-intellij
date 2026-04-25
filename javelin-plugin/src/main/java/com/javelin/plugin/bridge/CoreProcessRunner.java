@@ -26,7 +26,8 @@ public final class CoreProcessRunner {
             String classpath,
             int threads,
             Path sourcePath,
-            boolean offline
+            boolean offline,
+            Path jvmHome
     ) {
         List<String> command = new ArrayList<>();
         command.add(jbrJavaPath());
@@ -58,6 +59,11 @@ public final class CoreProcessRunner {
 
         if (offline) {
             command.add("--offline");
+        }
+
+        if (jvmHome != null) {
+            command.add("--jvm-home");
+            command.add(jvmHome.toString());
         }
 
         GeneralCommandLine cmd = new GeneralCommandLine(command);

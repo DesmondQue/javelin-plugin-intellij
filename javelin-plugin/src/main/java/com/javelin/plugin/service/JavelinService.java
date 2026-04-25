@@ -16,9 +16,12 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.Service.Level;
 import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.projectRoots.Sdk;
+import com.intellij.openapi.roots.ProjectRootManager;
 import com.javelin.plugin.bridge.CoreProcessResult;
 import com.javelin.plugin.bridge.CoreProcessRunner;
 import com.javelin.plugin.bridge.CsvResultParser;
+import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.model.FaultLocalizationResult;
 import com.javelin.plugin.ui.JavelinResultsListener;
 
@@ -68,6 +71,8 @@ public final class JavelinService {
             phaseCallback.accept("Javelin: Running " + request.algorithm() + " analysis...");
         }
 
+        Path jvmHome = resolveJvmHome();
+
         CoreProcessResult processResult = processRunner.run(
                 coreJar,
                 request.algorithm(),
@@ -77,7 +82,8 @@ public final class JavelinService {
                 request.classpath(),
                 request.threads(),
                 request.sourcePath(),
-                request.offline()
+                request.offline(),
+                jvmHome
         );
 
         if (processResult.exitCode() == 2) {
@@ -176,6 +182,30 @@ public final class JavelinService {
             }
         }
         return -1;
+    }
+
+    private Path resolveJvmHome() {
+        // Priority 1: explicit override in plugin settings
+        String settingsOverride = JavelinUiSettings.getJvmHome(project);
+        if (!settingsOverride.isBlank()) {
+            return Path.of(settingsOverride);
+        }
+
+        // Priority 2: Project SDK home
+        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
+        if (projectSdk != null && projectSdk.getHomePath() != null) {
+            return Path.of(projectSdk.getHomePath());
+        }
+
+        // Priority 3: fall back to JBR (no --jvm-home passed)
+        NotificationGroupManager.getInstance()
+                .getNotificationGroup("Javelin Notifications")
+                .createNotification(
+                        "Javelin: No Project SDK configured",
+                        "Test execution will use JBR 21. For Defects4J, set the Project SDK to Java 11.",
+                        NotificationType.WARNING)
+                .notify(project);
+        return null;
     }
 
     private void validateInputPaths(RunRequest request) {

@@ -15,6 +15,7 @@ public final class JavelinUiSettings {
     public static final String KEY_ALGORITHM = "javelin.ui.algorithm";
     public static final String KEY_MAX_THREADS = "javelin.ui.maxThreads";
     public static final String KEY_VISIBLE_BANDS = "javelin.ui.visibleBands";
+    public static final String KEY_JVM_HOME = "javelin.ui.jvmHome";
 
     private JavelinUiSettings() {
     }
@@ -94,6 +95,15 @@ public final class JavelinUiSettings {
         }
         String serialized = String.join(",", visibleBands.stream().map(Enum::name).toList());
         getProperties(project).setValue(KEY_VISIBLE_BANDS, serialized, "RED,ORANGE,YELLOW,GREEN");
+    }
+
+    public static String getJvmHome(Project project) {
+        String value = getProperties(project).getValue(KEY_JVM_HOME, "");
+        return value == null ? "" : value;
+    }
+
+    public static void setJvmHome(Project project, String jvmHome) {
+        getProperties(project).setValue(KEY_JVM_HOME, jvmHome == null ? "" : jvmHome, "");
     }
 
     private static int clampThreads(int threads) {
