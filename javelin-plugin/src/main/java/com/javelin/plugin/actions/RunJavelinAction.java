@@ -17,7 +17,10 @@ import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.javelin.plugin.config.JavelinUiSettings;
-import com.javelin.plugin.model.FaultLocalizationResult;
+import com.javelin.plugin.model.ConfidenceLevel;
+import com.javelin.plugin.model.LocalizationResult;
+import com.javelin.plugin.model.MethodResult;
+import com.javelin.plugin.model.StatementResult;
 import com.javelin.plugin.service.JavelinService;
 import com.javelin.plugin.util.PathDetector;
 
@@ -56,6 +59,9 @@ public final class RunJavelinAction extends AnAction {
             return;
         }
 
+        String granularity = JavelinUiSettings.getGranularity(project);
+        String rankingStrategy = JavelinUiSettings.getRankingStrategy(project);
+
         CompilerManager.getInstance(project).make((aborted, errors, warnings, compileContext) -> {
             if (aborted || errors > 0) {
                 notifyUser(project, "Build failed (" + errors + " error(s)). Fix compilation errors before running Javelin.", NotificationType.ERROR);
@@ -85,7 +91,7 @@ public final class RunJavelinAction extends AnAction {
                     indicator.setText("Javelin: Running " + algorithm + " analysis...");
                     try {
                         String classpath = manualClasspath != null ? manualClasspath : PathDetector.resolveModuleClasspath(project);
-                        List<FaultLocalizationResult> results = service.runAnalysis(new JavelinService.RunRequest(
+                        List<LocalizationResult> results = service.runAnalysis(new JavelinService.RunRequest(
                                 targetPath,
                                 testPath,
                                 algorithm,
@@ -93,27 +99,44 @@ public final class RunJavelinAction extends AnAction {
                                 threads,
                                 null,
                                 sourcePath,
-                                offline
+                                offline,
+                                granularity,
+                                rankingStrategy
                         ), indicator::setText);
 
                         ApplicationManager.getApplication().invokeLater(() -> {
                             ToolWindowManager.getInstance(project).getToolWindow("Javelin").activate(null);
                         });
 
-                        FaultLocalizationResult top = results.isEmpty() ? null : results.get(0);
+                        LocalizationResult top = results.isEmpty() ? null : results.get(0);
                         long durationNanos = service.getLastRunDurationNanos();
                         double seconds = durationNanos > 0 ? durationNanos / 1_000_000_000.0 : 0.0;
                         String summary = top == null
-                                ? String.format(Locale.ROOT, "Javelin found 0 suspicious lines in %.2fs.", seconds)
-                                : String.format(
-                                        Locale.ROOT,
-                                        "Javelin found %d suspicious lines in %.2fs (top: %s:%d with score %.6f).",
-                                        results.size(),
-                                        seconds,
-                                        top.fullyQualifiedClass(),
-                                        top.lineNumber(),
-                                        top.score());
+                                ? String.format(Locale.ROOT, "Javelin found 0 suspicious entries in %.2fs.", seconds)
+                                : switch (top) {
+                                    case StatementResult sr -> String.format(
+                                            Locale.ROOT,
+                                            "Javelin found %d suspicious entries in %.2fs (top: %s:%d with score %.6f).",
+                                            results.size(), seconds, sr.fullyQualifiedClass(), sr.lineNumber(), sr.score());
+                                    case MethodResult mr -> String.format(
+                                            Locale.ROOT,
+                                            "Javelin found %d suspicious entries in %.2fs (top: %s#%s with score %.6f).",
+                                            results.size(), seconds, mr.fullyQualifiedClass(), mr.methodName(), mr.score());
+                                };
                         notifyUser(project, summary, NotificationType.INFORMATION);
+
+                        ConfidenceLevel confidence = ConfidenceLevel.fromResults(results);
+                        if (confidence == ConfidenceLevel.LOW) {
+                            notifyUser(project,
+                                    "Javelin confidence is LOW - suspicion is spread across many locations. " +
+                                    "Add more targeted failing tests or check test coverage to improve localization.",
+                                    NotificationType.WARNING);
+                        } else if (confidence == ConfidenceLevel.MEDIUM) {
+                            notifyUser(project,
+                                    "Javelin confidence is MEDIUM - review the top-ranked locations first. " +
+                                    "Refining your test suite may help narrow the fault further.",
+                                    NotificationType.WARNING);
+                        }
                     } catch (Exception ex) {
                         notifyUser(project, ex.getMessage() == null ? "Javelin analysis failed." : ex.getMessage(), NotificationType.ERROR);
                     } finally {

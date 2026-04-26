@@ -25,7 +25,9 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiManager;
 import com.javelin.plugin.config.JavelinUiSettings;
-import com.javelin.plugin.model.FaultLocalizationResult;
+import com.javelin.plugin.model.LocalizationResult;
+import com.javelin.plugin.model.MethodResult;
+import com.javelin.plugin.model.StatementResult;
 import com.javelin.plugin.service.JavelinService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -50,6 +53,8 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
     // Index: FQCN -> (line number -> entry)
     private volatile Map<String, Map<Integer, SuspicionEntry>> entryIndex = Map.of();
+    // Primary lines: "FQCN:lineNumber" for statement lines and method first lines
+    private volatile Set<String> primaryLineKeys = Set.of();
     private volatile boolean highlightingEnabled;
     private volatile boolean gutterEnabled;
     private volatile boolean errorStripeEnabled;
@@ -65,14 +70,17 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
         JavelinService service = project.getService(JavelinService.class);
         if (service != null) {
-            this.entryIndex = buildIndex(service.getLastResults());
+            List<LocalizationResult> lastResults = service.getLastResults();
+            this.entryIndex = buildIndex(lastResults);
+            this.primaryLineKeys = buildPrimaryLineKeys(lastResults);
         }
         applyToOpenEditors();
     }
 
     @Override
-    public void resultsUpdated(List<FaultLocalizationResult> results) {
+    public void resultsUpdated(List<LocalizationResult> results) {
         this.entryIndex = buildIndex(results);
+        this.primaryLineKeys = buildPrimaryLineKeys(results);
         ApplicationManager.getApplication().invokeLater(() -> {
             applyToOpenEditors();
             DaemonCodeAnalyzer.getInstance(project).restart();
@@ -287,14 +295,14 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
         return merged;
     }
 
-    private Map<String, Map<Integer, SuspicionEntry>> buildIndex(List<FaultLocalizationResult> results) {
+    private Map<String, Map<Integer, SuspicionEntry>> buildIndex(List<LocalizationResult> results) {
         if (results == null || results.isEmpty()) {
             return Map.of();
         }
 
-        int maxRank = results.stream()
+        double maxRank = results.stream()
                 .filter(result -> result.score() > 0.0)
-                .mapToInt(FaultLocalizationResult::rank)
+                .mapToDouble(LocalizationResult::rank)
                 .max()
                 .orElse(0);
 
@@ -304,18 +312,30 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
         Map<String, Map<Integer, SuspicionEntry>> byClass = new LinkedHashMap<>();
 
-        for (FaultLocalizationResult result : results) {
+        for (LocalizationResult result : results) {
             if (result.score() <= 0.0) {
                 continue;
             }
 
             SuspicionBand band = SuspicionBand.fromRank(result.rank(), maxRank);
-            double percentile = ((double) result.rank() / (double) maxRank) * 100.0;
-
+            double percentile = (result.rank() / maxRank) * 100.0;
             SuspicionEntry entry = new SuspicionEntry(result.rank(), result.score(), percentile, band);
 
-            byClass.computeIfAbsent(result.fullyQualifiedClass(), key -> new LinkedHashMap<>())
-                    .put(result.lineNumber(), entry);
+            switch (result) {
+                case StatementResult sr -> byClass
+                        .computeIfAbsent(sr.fullyQualifiedClass(), key -> new LinkedHashMap<>())
+                        .put(sr.lineNumber(), entry);
+                case MethodResult mr -> {
+                    Map<Integer, SuspicionEntry> classMap = byClass
+                            .computeIfAbsent(mr.fullyQualifiedClass(), key -> new LinkedHashMap<>());
+                    int startLine = (mr.firstLine() < mr.lastLine())
+                            ? Math.max(1, mr.firstLine() - 1)
+                            : mr.firstLine();
+                    for (int line = startLine; line <= mr.lastLine(); line++) {
+                        classMap.putIfAbsent(line, entry);
+                    }
+                }
+            }
         }
 
         Map<String, Map<Integer, SuspicionEntry>> immutable = new LinkedHashMap<>();
@@ -323,6 +343,52 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             immutable.put(classEntry.getKey(), Collections.unmodifiableMap(new LinkedHashMap<>(classEntry.getValue())));
         }
         return Collections.unmodifiableMap(immutable);
+    }
+
+    private static Set<String> buildPrimaryLineKeys(List<LocalizationResult> results) {
+        if (results == null || results.isEmpty()) return Set.of();
+        Set<String> keys = new HashSet<>();
+        for (LocalizationResult result : results) {
+            if (result.score() <= 0.0) continue;
+            switch (result) {
+                case StatementResult sr -> keys.add(sr.fullyQualifiedClass() + ":" + sr.lineNumber());
+                case MethodResult mr -> {
+                    int primaryLine = (mr.firstLine() < mr.lastLine())
+                            ? Math.max(1, mr.firstLine() - 1)
+                            : mr.firstLine();
+                    keys.add(mr.fullyQualifiedClass() + ":" + primaryLine);
+                }
+            }
+        }
+        return Collections.unmodifiableSet(keys);
+    }
+
+    public boolean isPrimaryLine(String fqcn, int lineNumber) {
+        return primaryLineKeys.contains(fqcn + ":" + lineNumber);
+    }
+
+    public boolean isPrimaryLineForElement(@NotNull com.intellij.psi.PsiElement element) {
+        com.intellij.psi.PsiFile file = element.getContainingFile();
+        if (!(file instanceof PsiJavaFile javaFile)) return false;
+
+        Document document = com.intellij.psi.PsiDocumentManager.getInstance(project).getDocument(file);
+        if (document == null) return false;
+
+        int lineNumber = document.getLineNumber(element.getTextRange().getStartOffset()) + 1;
+
+        for (PsiClass psiClass : javaFile.getClasses()) {
+            String qualifiedName = psiClass.getQualifiedName();
+            if (qualifiedName != null && isPrimaryLine(qualifiedName, lineNumber)) {
+                return true;
+            }
+        }
+
+        String packageName = javaFile.getPackageName();
+        String simpleClassName = javaFile.getVirtualFile() == null
+                ? javaFile.getName().replaceFirst("\\.java$", "")
+                : javaFile.getVirtualFile().getNameWithoutExtension();
+        String fallbackFqcn = packageName.isBlank() ? simpleClassName : packageName + "." + simpleClassName;
+        return isPrimaryLine(fallbackFqcn, lineNumber);
     }
 
     private static Color withAlpha(Color color, int alpha) {
@@ -354,13 +420,13 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             };
         }
 
-        public static SuspicionBand fromRank(int rank, int maxRank) {
+        public static SuspicionBand fromRank(double rank, double maxRank) {
             if (maxRank <= 0) {
                 return GREEN;
             }
-            int redCutoff = Math.max(1, (int) Math.ceil(maxRank * 0.10));
-            int orangeCutoff = Math.max(redCutoff + 1, (int) Math.ceil(maxRank * 0.25));
-            int yellowCutoff = Math.max(orangeCutoff + 1, (int) Math.ceil(maxRank * 0.50));
+            double redCutoff = Math.max(1.0, Math.ceil(maxRank * 0.10));
+            double orangeCutoff = Math.max(redCutoff + 1, Math.ceil(maxRank * 0.25));
+            double yellowCutoff = Math.max(orangeCutoff + 1, Math.ceil(maxRank * 0.50));
 
             if (rank <= redCutoff) {
                 return RED;
@@ -375,10 +441,10 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
         }
     }
 
-    public record SuspicionEntry(int rank, double score, double percentile, SuspicionBand band) {
+    public record SuspicionEntry(double rank, double score, double percentile, SuspicionBand band) {
         public String tooltip() {
             return String.format(Locale.ROOT,
-                    "Javelin suspicion: rank %d, score %.6f, percentile %.1f%%",
+                    "Javelin suspicion: rank %.1f, score %.6f, percentile %.1f%%",
                     rank,
                     score,
                     percentile);

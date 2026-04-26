@@ -3,9 +3,9 @@ package com.javelin.plugin.model;
 import java.util.List;
 
 public record RankGroup(
-        int rank,
+        double rank,
         double score,
-        List<FaultLocalizationResult> lines,
+        List<LocalizationResult> results,
         int topN
 ) {
 }

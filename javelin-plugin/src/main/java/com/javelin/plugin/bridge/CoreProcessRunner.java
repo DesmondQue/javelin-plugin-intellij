@@ -4,11 +4,16 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
+import com.intellij.execution.process.ProcessAdapter;
+import com.intellij.execution.process.ProcessEvent;
 import com.intellij.execution.process.ProcessOutput;
+import com.intellij.execution.process.ProcessOutputTypes;
+import com.intellij.openapi.util.Key;
 
 public final class CoreProcessRunner {
 
@@ -27,7 +32,28 @@ public final class CoreProcessRunner {
             int threads,
             Path sourcePath,
             boolean offline,
-            Path jvmHome
+            Path jvmHome,
+            String granularity,
+            String rankingStrategy
+    ) {
+        return run(jarPath, algorithm, targetPath, testPath, outputPath, classpath, threads,
+                sourcePath, offline, jvmHome, granularity, rankingStrategy, null);
+    }
+
+    public CoreProcessResult run(
+            Path jarPath,
+            String algorithm,
+            Path targetPath,
+            Path testPath,
+            Path outputPath,
+            String classpath,
+            int threads,
+            Path sourcePath,
+            boolean offline,
+            Path jvmHome,
+            String granularity,
+            String rankingStrategy,
+            Consumer<String> stderrLineCallback
     ) {
         List<String> command = new ArrayList<>();
         command.add(jbrJavaPath());
@@ -66,12 +92,35 @@ public final class CoreProcessRunner {
             command.add(jvmHome.toString());
         }
 
+        if (granularity != null && !granularity.isBlank()) {
+            command.add("-g");
+            command.add(granularity);
+        }
+
+        if (rankingStrategy != null && !rankingStrategy.isBlank()) {
+            command.add("--ranking");
+            command.add(rankingStrategy);
+        }
+
         GeneralCommandLine cmd = new GeneralCommandLine(command);
         cmd.withCharset(java.nio.charset.StandardCharsets.UTF_8);
         cmd.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
 
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(cmd);
+            if (stderrLineCallback != null) {
+                handler.addProcessListener(new ProcessAdapter() {
+                    @Override
+                    public void onTextAvailable(ProcessEvent event, Key outputType) {
+                        if (ProcessOutputTypes.STDERR.equals(outputType)) {
+                            String text = event.getText().strip();
+                            if (!text.isBlank()) {
+                                stderrLineCallback.accept(text);
+                            }
+                        }
+                    }
+                });
+            }
             ProcessOutput output = handler.runProcess(0);
             return new CoreProcessResult(output.getExitCode(), output.getStdout(), output.getStderr());
         } catch (ExecutionException ex) {

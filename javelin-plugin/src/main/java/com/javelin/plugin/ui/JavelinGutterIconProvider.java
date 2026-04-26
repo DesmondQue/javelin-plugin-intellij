@@ -44,6 +44,11 @@ public final class JavelinGutterIconProvider implements LineMarkerProvider {
             return null;
         }
 
+        // For method results, only show the icon on the method declaration line
+        if (!highlightProvider.isPrimaryLineForElement(element)) {
+            return null;
+        }
+
         return new LineMarkerInfo<PsiElement>(
                 element,
                 element.getTextRange(),

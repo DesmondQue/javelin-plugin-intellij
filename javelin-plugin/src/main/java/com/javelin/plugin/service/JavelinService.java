@@ -22,8 +22,9 @@ import com.javelin.plugin.bridge.CoreProcessResult;
 import com.javelin.plugin.bridge.CoreProcessRunner;
 import com.javelin.plugin.bridge.CsvResultParser;
 import com.javelin.plugin.config.JavelinUiSettings;
-import com.javelin.plugin.model.FaultLocalizationResult;
+import com.javelin.plugin.model.LocalizationResult;
 import com.javelin.plugin.ui.JavelinResultsListener;
+import com.javelin.plugin.util.JavaVersionParser;
 
 @Service(Level.PROJECT)
 public final class JavelinService {
@@ -36,14 +37,16 @@ public final class JavelinService {
             int threads,
             Path outputPath,
             Path sourcePath,
-            boolean offline
+            boolean offline,
+            String granularity,
+            String rankingStrategy
     ) {
     }
 
     private final Project project;
     private final CoreProcessRunner processRunner = new CoreProcessRunner();
     private final CsvResultParser csvParser = new CsvResultParser();
-    private List<FaultLocalizationResult> lastResults = List.of();
+    private List<LocalizationResult> lastResults = List.of();
     private volatile long lastRunDurationNanos = -1L;
     private volatile boolean running;
     private volatile Integer cachedJavaMajor;
@@ -53,61 +56,89 @@ public final class JavelinService {
         this.project = project;
     }
 
-    public List<FaultLocalizationResult> runAnalysis(RunRequest request) throws IOException {
+    public List<LocalizationResult> runAnalysis(RunRequest request) throws IOException {
         return runAnalysis(request, null);
     }
 
-    public List<FaultLocalizationResult> runAnalysis(RunRequest request, Consumer<String> phaseCallback) throws IOException {
+    public List<LocalizationResult> runAnalysis(RunRequest request, Consumer<String> phaseCallback) throws IOException {
         long start = System.nanoTime();
         ensureJava21OrWarn();
         validateInputPaths(request);
 
-        Path outputPath = request.outputPath() == null
+        boolean isTempOutput = request.outputPath() == null;
+        Path outputPath = isTempOutput
             ? Files.createTempFile("javelin-results-", ".csv")
             : request.outputPath();
         Path coreJar = resolveCoreJarPath();
 
-        if (phaseCallback != null) {
-            phaseCallback.accept("Javelin: Running " + request.algorithm() + " analysis...");
-        }
+        try {
+            if (phaseCallback != null) {
+                phaseCallback.accept("Javelin: Running " + request.algorithm() + " analysis...");
+            }
 
-        Path jvmHome = resolveJvmHome();
+            Path jvmHome = resolveJvmHome();
 
-        CoreProcessResult processResult = processRunner.run(
-                coreJar,
-                request.algorithm(),
-                request.targetPath(),
-                request.testPath(),
-                outputPath,
-                request.classpath(),
-                request.threads(),
-                request.sourcePath(),
-                request.offline(),
-                jvmHome
-        );
+            Consumer<String> stderrCallback = phaseCallback == null ? null : line -> {
+                if (line.startsWith("[javelin]")) {
+                    phaseCallback.accept("Javelin: " + line.substring("[javelin]".length()).strip());
+                }
+            };
 
-        if (processResult.exitCode() == 2) {
-            throw new IllegalStateException("SBFL precondition failed: no failing tests were detected.");
-        }
-        if (processResult.exitCode() != 0) {
-            throw new IllegalStateException("javelin-core failed with exit code " + processResult.exitCode() + "\n" + processResult.stderr());
-        }
-        if (!Files.exists(outputPath) || Files.size(outputPath) == 0L) {
-            throw new IllegalStateException("javelin-core exited successfully but produced no CSV output.");
-        }
+            CoreProcessResult processResult = processRunner.run(
+                    coreJar,
+                    request.algorithm(),
+                    request.targetPath(),
+                    request.testPath(),
+                    outputPath,
+                    request.classpath(),
+                    request.threads(),
+                    request.sourcePath(),
+                    request.offline(),
+                    jvmHome,
+                    request.granularity(),
+                    request.rankingStrategy(),
+                    stderrCallback
+            );
 
-        if (phaseCallback != null) {
-            phaseCallback.accept("Javelin: Parsing results...");
-        }
+            if (processResult.exitCode() != 0) {
+                throw new IllegalStateException(
+                        describeExitCode(processResult.exitCode()) + "\n" + processResult.stderr());
+            }
+            if (!Files.exists(outputPath) || Files.size(outputPath) == 0L) {
+                throw new IllegalStateException("javelin-core exited successfully but produced no CSV output.");
+            }
 
-        List<FaultLocalizationResult> parsed = csvParser.parse(outputPath);
-        lastResults = Collections.unmodifiableList(new ArrayList<>(parsed));
-        lastRunDurationNanos = System.nanoTime() - start;
-        project.getMessageBus().syncPublisher(JavelinResultsListener.TOPIC).resultsUpdated(lastResults);
-        return lastResults;
+            if (phaseCallback != null) {
+                phaseCallback.accept("Javelin: Parsing results...");
+            }
+
+            List<LocalizationResult> parsed = csvParser.parse(outputPath);
+            lastResults = Collections.unmodifiableList(new ArrayList<>(parsed));
+            lastRunDurationNanos = System.nanoTime() - start;
+            project.getMessageBus().syncPublisher(JavelinResultsListener.TOPIC).resultsUpdated(lastResults);
+            return lastResults;
+        } finally {
+            if (isTempOutput) {
+                try {
+                    Files.deleteIfExists(outputPath);
+                } catch (IOException ignored) {}
+            }
+        }
     }
 
-    public List<FaultLocalizationResult> getLastResults() {
+    public static String describeExitCode(int code) {
+        return switch (code) {
+            case 2 -> "No failing tests were found. Ensure your test suite has at least one failing test.";
+            case 3 -> "The target classes directory was not found or is empty.";
+            case 4 -> "The test classes directory was not found or is empty.";
+            case 5 -> "The source directory was not found or is empty (required for ochiai-ms).";
+            case 6 -> "An unexpected error occurred inside javelin-core. Check the log for details.";
+            case 7 -> "Analysis timed out. Consider reducing the number of test cases.";
+            default -> "javelin-core failed with exit code " + code + ".";
+        };
+    }
+
+    public List<LocalizationResult> getLastResults() {
         return lastResults;
     }
 
@@ -144,8 +175,6 @@ public final class JavelinService {
     }
 
     private void ensureJava21OrWarn() {
-        // javelin-core is launched using the IDE's bundled JBR (always 21+ for IntelliJ 2025.1).
-        // Verify the JBR version as a safety check.
         ensureCachedJavaVersion();
         int major = cachedJavaMajor == null ? -1 : cachedJavaMajor;
         if (major < 21) {
@@ -161,43 +190,20 @@ public final class JavelinService {
         }
         String versionOutput = processRunner.detectJavaVersion();
         cachedJavaVersionOutput = versionOutput;
-        cachedJavaMajor = parseJavaMajor(versionOutput);
-    }
-
-    private int parseJavaMajor(String text) {
-        for (String token : text.replace('"', ' ').split("\\s+")) {
-            if (token.matches("\\d+(\\.\\d+)?(\\.\\d+)?")) {
-                String[] parts = token.split("\\.");
-                if (parts.length > 0) {
-                    try {
-                        int v = Integer.parseInt(parts[0]);
-                        if (v == 1 && parts.length > 1) {
-                            return Integer.parseInt(parts[1]);
-                        }
-                        return v;
-                    } catch (NumberFormatException ignored) {
-                        // continue scanning
-                    }
-                }
-            }
-        }
-        return -1;
+        cachedJavaMajor = JavaVersionParser.parseJavaMajor(versionOutput);
     }
 
     private Path resolveJvmHome() {
-        // Priority 1: explicit override in plugin settings
         String settingsOverride = JavelinUiSettings.getJvmHome(project);
         if (!settingsOverride.isBlank()) {
             return Path.of(settingsOverride);
         }
 
-        // Priority 2: Project SDK home
         Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
         if (projectSdk != null && projectSdk.getHomePath() != null) {
             return Path.of(projectSdk.getHomePath());
         }
 
-        // Priority 3: fall back to JBR (no --jvm-home passed)
         NotificationGroupManager.getInstance()
                 .getNotificationGroup("Javelin Notifications")
                 .createNotification(
@@ -234,7 +240,6 @@ public final class JavelinService {
     }
 
     private Path findCoreJarPath(boolean notifyOnMissing) {
-        // 1. Check bundled inside the plugin's own lib/ directory
         IdeaPluginDescriptor descriptor = PluginManagerCore.getPlugin(PluginId.getId("com.javelin.plugin"));
         if (descriptor != null) {
             Path bundled = descriptor.getPluginPath().resolve("lib").resolve(CORE_JAR_NAME);
@@ -243,7 +248,6 @@ public final class JavelinService {
             }
         }
 
-        // 2. Check relative to the opened project (if project itself contains javelin-cli/javelin-core)
         String basePath = project.getBasePath();
         if (basePath != null) {
             Path inProject = Path.of(basePath).resolve("javelin-cli").resolve("javelin-core").resolve("build").resolve("libs").resolve(CORE_JAR_NAME);
@@ -252,7 +256,6 @@ public final class JavelinService {
             }
         }
 
-        // 3. Check the plugin's source repo location (sibling javelin-cli/javelin-core/ next to javelin-plugin/)
         if (descriptor != null) {
             Path pluginDir = descriptor.getPluginPath();
             Path sibling = pluginDir.getParent().resolve("javelin-cli").resolve("javelin-core").resolve("build").resolve("libs").resolve(CORE_JAR_NAME);

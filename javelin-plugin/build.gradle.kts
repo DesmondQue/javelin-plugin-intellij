@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.javelin"
-version = "0.1.1"
+version = "0.1.2"
 
 java {
     toolchain {
@@ -24,6 +24,12 @@ dependencies {
         intellijIdeaCommunity("2025.1")
         bundledPlugin("com.intellij.java")
     }
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 intellijPlatform {

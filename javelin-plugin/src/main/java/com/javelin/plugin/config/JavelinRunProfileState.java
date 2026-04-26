@@ -21,7 +21,7 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.OrderEnumerator;
-import com.javelin.plugin.model.FaultLocalizationResult;
+import com.javelin.plugin.model.LocalizationResult;
 import com.javelin.plugin.service.JavelinService;
 
 public final class JavelinRunProfileState implements RunProfileState {
@@ -44,7 +44,6 @@ public final class JavelinRunProfileState implements RunProfileState {
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             try {
                 console.print("Building project..." + System.lineSeparator(), ConsoleViewContentType.NORMAL_OUTPUT);
-                // Trigger build and wait for it on the pooled thread via a latch
                 java.util.concurrent.CountDownLatch buildLatch = new java.util.concurrent.CountDownLatch(1);
                 boolean[] buildOk = {false};
                 ApplicationManager.getApplication().invokeLater(() ->
@@ -60,7 +59,7 @@ public final class JavelinRunProfileState implements RunProfileState {
                 }
                 console.print("Running Javelin analysis..." + System.lineSeparator(), ConsoleViewContentType.NORMAL_OUTPUT);
                 JavelinService service = project.getService(JavelinService.class);
-                List<FaultLocalizationResult> results = service.runAnalysis(new JavelinService.RunRequest(
+                List<LocalizationResult> results = service.runAnalysis(new JavelinService.RunRequest(
                         Path.of(configuration.getTargetPath()),
                         Path.of(configuration.getTestPath()),
                         configuration.getAlgorithm(),
@@ -68,7 +67,9 @@ public final class JavelinRunProfileState implements RunProfileState {
                         configuration.getThreads(),
                         configuration.getOutputPath().isBlank() ? null : Path.of(configuration.getOutputPath()),
                         configuration.getSourcePath().isBlank() ? null : Path.of(configuration.getSourcePath()),
-                        configuration.isOffline()
+                        configuration.isOffline(),
+                        JavelinUiSettings.getGranularity(project),
+                        JavelinUiSettings.getRankingStrategy(project)
                 ));
                 console.print("Completed. Results: " + results.size() + System.lineSeparator(), ConsoleViewContentType.SYSTEM_OUTPUT);
             } catch (Exception ex) {

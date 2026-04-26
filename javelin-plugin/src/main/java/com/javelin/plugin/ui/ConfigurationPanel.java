@@ -37,10 +37,13 @@ public final class ConfigurationPanel extends JPanel {
     private final TextFieldWithBrowseButton classpathField = new TextFieldWithBrowseButton();
     private final TextFieldWithBrowseButton jvmHomeField = new TextFieldWithBrowseButton();
     private final ComboBox<String> algorithmCombo = new ComboBox<>(new String[]{"ochiai", "ochiai-ms"});
+    private final ComboBox<String> granularityCombo = new ComboBox<>(new String[]{"method", "statement"});
+    private final ComboBox<String> rankingCombo = new ComboBox<>(new String[]{"average", "dense"});
+    private final JBLabel rankingLabel = new JBLabel("Ranking:");
     private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
     private final JCheckBox offlineCheckbox = new JCheckBox("Force offline mode");
-    private final JButton runButton = new JButton("\u25B6 Run Javelin");
+    private final JButton runButton = new JButton("▶ Run Javelin");
     private final JButton autoDetectButton = new JButton("Auto-Detect");
     private final JBLabel sourceDirLabel = new JBLabel("* Source directory:");
 
@@ -48,27 +51,30 @@ public final class ConfigurationPanel extends JPanel {
         super(new BorderLayout());
         this.project = project;
 
-        FileChooserDescriptor folderDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
-
         FileChooserDescriptor targetDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
         targetDescriptor.setTitle("Target Classes Directory");
         targetField.addBrowseFolderListener(null, targetDescriptor);
+        targetField.getTextField().setToolTipText("Directory containing compiled application classes");
 
         FileChooserDescriptor testDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
         testDescriptor.setTitle("Test Classes Directory");
         testField.addBrowseFolderListener(null, testDescriptor);
+        testField.getTextField().setToolTipText("Directory containing compiled test classes");
 
         FileChooserDescriptor sourceDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
         sourceDescriptor.setTitle("Source Files Directory");
         sourceField.addBrowseFolderListener(null, sourceDescriptor);
+        sourceField.getTextField().setToolTipText("Java source directory (required for ochiai-ms)");
 
         FileChooserDescriptor classpathDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
         classpathDescriptor.setTitle("Extra Classpath");
         classpathField.addBrowseFolderListener(null, classpathDescriptor);
+        classpathField.getTextField().setToolTipText("Overrides auto-detected dependencies for test execution (leave empty to auto-resolve)");
 
         FileChooserDescriptor jvmHomeDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
         jvmHomeDescriptor.setTitle("JVM Home Directory");
         jvmHomeField.addBrowseFolderListener(null, jvmHomeDescriptor);
+        jvmHomeField.getTextField().setToolTipText("Override the JVM used to run tests (defaults to project SDK)");
         jvmHomeField.setText(JavelinUiSettings.getJvmHome(project));
         jvmHomeField.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }
@@ -85,9 +91,30 @@ public final class ConfigurationPanel extends JPanel {
                 JavelinUiSettings.setAlgorithm(project, selected.toString());
             }
         });
+        algorithmCombo.setToolTipText("Fault localization algorithm to use");
+
+        granularityCombo.setSelectedItem(JavelinUiSettings.getGranularity(project));
+        granularityCombo.addActionListener(e -> {
+            updateRankingVisibility();
+            Object selected = granularityCombo.getSelectedItem();
+            if (selected != null) {
+                JavelinUiSettings.setGranularity(project, selected.toString());
+            }
+        });
+        granularityCombo.setToolTipText("Localization granularity: method ranks methods, statement ranks individual lines");
+
+        rankingCombo.setSelectedItem(JavelinUiSettings.getRankingStrategy(project));
+        rankingCombo.addActionListener(e -> {
+            Object selected = rankingCombo.getSelectedItem();
+            if (selected != null) {
+                JavelinUiSettings.setRankingStrategy(project, selected.toString());
+            }
+        });
 
         threadsSpinner.setValue(JavelinUiSettings.getMaxThreads(project));
         threadsSpinner.addChangeListener(e -> JavelinUiSettings.setMaxThreads(project, (Integer) threadsSpinner.getValue()));
+        threadsSpinner.setToolTipText("Number of parallel threads for test execution");
+        offlineCheckbox.setToolTipText("Skip dependency resolution and use only the provided classpath");
 
         JPanel formPanel = new JPanel(new GridBagLayout());
         int row = 0;
@@ -95,12 +122,13 @@ public final class ConfigurationPanel extends JPanel {
         addRow(formPanel, "* Test classes:", testField, row++);
         addRow(formPanel, "* Algorithm:", algorithmCombo, row++);
         addRow(formPanel, sourceDirLabel, sourceField, row++);
+        addRow(formPanel, "Granularity:", granularityCombo, row++);
+        addRow(formPanel, rankingLabel, rankingCombo, row++);
         addRow(formPanel, "Extra classpath:", classpathField, row++);
         addRow(formPanel, "Override JVM home:", jvmHomeField, row++);
         addRow(formPanel, "Threads:", threadsSpinner, row++);
         addRow(formPanel, "", offlineCheckbox, row++);
 
-        // Spacer to push buttons down
         GridBagConstraints spacer = new GridBagConstraints();
         spacer.gridx = 0;
         spacer.gridy = row;
@@ -128,6 +156,7 @@ public final class ConfigurationPanel extends JPanel {
         add(buttonPanel, BorderLayout.SOUTH);
 
         updateSourceDirVisibility();
+        updateRankingVisibility();
         autoDetect();
     }
 
@@ -220,6 +249,8 @@ public final class ConfigurationPanel extends JPanel {
         runButton.setEnabled(!running);
         autoDetectButton.setEnabled(!running);
         algorithmCombo.setEnabled(!running);
+        granularityCombo.setEnabled(!running);
+        rankingCombo.setEnabled(!running && "method".equals(granularityCombo.getSelectedItem()));
         threadsSpinner.setEnabled(!running);
         offlineCheckbox.setEnabled(!running);
         targetField.setEnabled(!running);
@@ -230,7 +261,7 @@ public final class ConfigurationPanel extends JPanel {
         if (running) {
             runButton.setText("Analysis Running...");
         } else {
-            runButton.setText("\u25B6 Run Javelin");
+            runButton.setText("▶ Run Javelin");
         }
     }
 
@@ -257,6 +288,18 @@ public final class ConfigurationPanel extends JPanel {
         boolean isOchiaiMs = "ochiai-ms".equals(algorithmCombo.getSelectedItem());
         sourceDirLabel.setVisible(isOchiaiMs);
         sourceField.setVisible(isOchiaiMs);
+    }
+
+    private void updateRankingVisibility() {
+        boolean isMethod = "method".equals(granularityCombo.getSelectedItem());
+        if (!isMethod) {
+            rankingCombo.setSelectedItem("dense");
+            JavelinUiSettings.setRankingStrategy(project, "dense");
+        }
+        rankingCombo.setEnabled(isMethod);
+        rankingCombo.setToolTipText(isMethod
+                ? "Ranking strategy: average uses mean rank for tied scores, dense uses sequential ranks"
+                : "Average ranking is only available at method level");
     }
 
     private void addRow(JPanel panel, String label, javax.swing.JComponent component, int row) {

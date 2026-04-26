@@ -16,6 +16,8 @@ public final class JavelinUiSettings {
     public static final String KEY_MAX_THREADS = "javelin.ui.maxThreads";
     public static final String KEY_VISIBLE_BANDS = "javelin.ui.visibleBands";
     public static final String KEY_JVM_HOME = "javelin.ui.jvmHome";
+    public static final String KEY_GRANULARITY = "javelin.ui.granularity";
+    public static final String KEY_RANKING_STRATEGY = "javelin.ui.rankingStrategy";
 
     private JavelinUiSettings() {
     }
@@ -79,7 +81,6 @@ public final class JavelinUiSettings {
             try {
                 bands.add(SuspicionBand.valueOf(trimmed));
             } catch (IllegalArgumentException ignored) {
-                // Ignore unknown values to keep settings forward-compatible.
             }
         }
         if (bands.isEmpty()) {
@@ -104,6 +105,28 @@ public final class JavelinUiSettings {
 
     public static void setJvmHome(Project project, String jvmHome) {
         getProperties(project).setValue(KEY_JVM_HOME, jvmHome == null ? "" : jvmHome, "");
+    }
+
+    public static String getGranularity(Project project) {
+        String value = getProperties(project).getValue(KEY_GRANULARITY, "method");
+        return "method".equals(value) || "statement".equals(value) ? value : "method";
+    }
+
+    public static void setGranularity(Project project, String granularity) {
+        if ("method".equals(granularity) || "statement".equals(granularity)) {
+            getProperties(project).setValue(KEY_GRANULARITY, granularity, "method");
+        }
+    }
+
+    public static String getRankingStrategy(Project project) {
+        String value = getProperties(project).getValue(KEY_RANKING_STRATEGY, "average");
+        return "average".equals(value) || "dense".equals(value) ? value : "average";
+    }
+
+    public static void setRankingStrategy(Project project, String rankingStrategy) {
+        if ("average".equals(rankingStrategy) || "dense".equals(rankingStrategy)) {
+            getProperties(project).setValue(KEY_RANKING_STRATEGY, rankingStrategy, "average");
+        }
     }
 
     private static int clampThreads(int threads) {
