@@ -38,27 +38,42 @@ intellijPlatform {
         name.set("Javelin - An SBFL Tool for IntelliJ")
         version.set(project.version.toString())
         description.set("""
-            <h2>Javelin — Spectrum-Based Fault Localization for Java</h2>
+            <h2>Javelin -- Spectrum-Based Fault Localization for Java</h2>
             <p>
-              Javelin automates <b>Spectrum-Based Fault Localization (SBFL)</b> using the
-              <b>Ochiai</b> algorithm. It instruments your JUnit tests, builds a coverage
-              spectrum, and ranks every source line by suspiciousness — so you can find
-              the bug instead of searching for it.
+              Javelin automates <b>Spectrum-Based Fault Localization (SBFL)</b> for Java projects.
+              It instruments your JUnit tests, builds a coverage spectrum, and ranks every source
+              line or method by suspiciousness -- so you can find the bug instead of searching for it.
             </p>
 
             <h3>Key Features</h3>
             <ul>
-              <li><b>One-click analysis</b> — run from the Tools menu or press <code>Ctrl+Shift+J</code></li>
-              <li><b>4-tier visual highlighting</b> — red / orange / yellow / green bands in the editor, gutter, and scrollbar</li>
-              <li><b>Results table</b> — sortable, filterable, with double-click navigation to source</li>
-              <li><b>Export to CSV</b> — share or archive ranked results</li>
-              <li><b>Status-bar readiness widget</b> — instant project health check before analysis</li>
-              <li><b>Run configurations</b> — save and reuse custom analysis settings</li>
+              <li><b>One-click analysis</b> -- run from the Tools menu or press <code>Ctrl+Shift+J</code></li>
+              <li><b>4-tier visual highlighting</b> -- red / orange / yellow / green bands in the editor, gutter, and scrollbar</li>
+              <li><b>Results table</b> -- sortable, filterable, with double-click navigation to source</li>
+              <li><b>Export to CSV</b> -- share or archive ranked results with percentile and band classification</li>
+              <li><b>Status-bar readiness widget</b> -- instant project health check before analysis</li>
+              <li><b>Run configurations</b> -- save and reuse custom analysis settings</li>
+              <li><b>Auto-detect paths</b> -- automatically detects target, test, and source directories for Gradle and Maven projects</li>
+              <li><b>Persistent settings</b> -- save defaults that persist across sessions via Settings > Tools > Javelin</li>
+            </ul>
+
+            <h3>Algorithm Support</h3>
+            <ul>
+              <li><b>Ochiai</b> (default) -- standard SBFL algorithm using coverage spectrum</li>
+              <li><b>Ochiai-MS</b> (experimental) -- mutation-aware variant that integrates PITest mutation analysis for enhanced fault localization</li>
+            </ul>
+
+            <h3>Output Options</h3>
+            <ul>
+              <li><b>Granularity:</b> Statement-level (default, ranks individual lines) or method-level (aggregates to methods using max score)</li>
+              <li><b>Ranking:</b> Dense (default, recommended for debugging) or average/MID (for SBFL evaluation and EXAM scores)</li>
+              <li><b>Offline mode:</b> Pre-instruments bytecode to avoid Java agent conflicts with Mockito-inline, ByteBuddy, PowerMock, JMockit, or AspectJ</li>
             </ul>
 
             <h3>Requirements</h3>
             <ul>
-              <li>IntelliJ IDEA 2025.1 – 2025.3.x (Community or Ultimate)</li>
+              <li>IntelliJ IDEA 2025.1 -- 2025.3.x (Community or Ultimate)</li>
+              <li>Java 21+ JDK configured in the project</li>
               <li>A Java project with JUnit tests (at least one failing test required)</li>
             </ul>
 

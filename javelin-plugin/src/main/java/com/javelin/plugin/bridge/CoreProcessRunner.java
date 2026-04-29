@@ -37,7 +37,7 @@ public final class CoreProcessRunner {
             String rankingStrategy
     ) {
         return run(jarPath, algorithm, targetPath, testPath, outputPath, classpath, threads,
-                sourcePath, offline, jvmHome, granularity, rankingStrategy, null);
+                sourcePath, offline, jvmHome, granularity, rankingStrategy, null, null);
     }
 
     public CoreProcessResult run(
@@ -54,6 +54,26 @@ public final class CoreProcessRunner {
             String granularity,
             String rankingStrategy,
             Consumer<String> stderrLineCallback
+    ) {
+        return run(jarPath, algorithm, targetPath, testPath, outputPath, classpath, threads,
+                sourcePath, offline, jvmHome, granularity, rankingStrategy, stderrLineCallback, null);
+    }
+
+    public CoreProcessResult run(
+            Path jarPath,
+            String algorithm,
+            Path targetPath,
+            Path testPath,
+            Path outputPath,
+            String classpath,
+            int threads,
+            Path sourcePath,
+            boolean offline,
+            Path jvmHome,
+            String granularity,
+            String rankingStrategy,
+            Consumer<String> stderrLineCallback,
+            Path workingDir
     ) {
         List<String> command = new ArrayList<>();
         command.add(jbrJavaPath());
@@ -105,6 +125,9 @@ public final class CoreProcessRunner {
         GeneralCommandLine cmd = new GeneralCommandLine(command);
         cmd.withCharset(java.nio.charset.StandardCharsets.UTF_8);
         cmd.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
+        if (workingDir != null) {
+            cmd.setWorkDirectory(workingDir.toFile());
+        }
 
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(cmd);

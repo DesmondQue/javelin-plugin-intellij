@@ -321,17 +321,16 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             double percentile = (result.rank() / maxRank) * 100.0;
             SuspicionEntry entry = new SuspicionEntry(result.rank(), result.score(), percentile, band);
 
+            String fqcn = stripInnerClass(result.fullyQualifiedClass());
+
             switch (result) {
                 case StatementResult sr -> byClass
-                        .computeIfAbsent(sr.fullyQualifiedClass(), key -> new LinkedHashMap<>())
+                        .computeIfAbsent(fqcn, key -> new LinkedHashMap<>())
                         .put(sr.lineNumber(), entry);
                 case MethodResult mr -> {
                     Map<Integer, SuspicionEntry> classMap = byClass
-                            .computeIfAbsent(mr.fullyQualifiedClass(), key -> new LinkedHashMap<>());
-                    int startLine = (mr.firstLine() < mr.lastLine())
-                            ? Math.max(1, mr.firstLine() - 1)
-                            : mr.firstLine();
-                    for (int line = startLine; line <= mr.lastLine(); line++) {
+                            .computeIfAbsent(fqcn, key -> new LinkedHashMap<>());
+                    for (int line = mr.firstLine(); line <= mr.lastLine(); line++) {
                         classMap.putIfAbsent(line, entry);
                     }
                 }
@@ -350,13 +349,13 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
         Set<String> keys = new HashSet<>();
         for (LocalizationResult result : results) {
             if (result.score() <= 0.0) continue;
+            String fqcn = stripInnerClass(result.fullyQualifiedClass());
             switch (result) {
-                case StatementResult sr -> keys.add(sr.fullyQualifiedClass() + ":" + sr.lineNumber());
+                case StatementResult sr -> keys.add(fqcn + ":" + sr.lineNumber());
                 case MethodResult mr -> {
-                    int primaryLine = (mr.firstLine() < mr.lastLine())
-                            ? Math.max(1, mr.firstLine() - 1)
-                            : mr.firstLine();
-                    keys.add(mr.fullyQualifiedClass() + ":" + primaryLine);
+                    for (int line = mr.firstLine(); line <= mr.lastLine(); line++) {
+                        keys.add(fqcn + ":" + line);
+                    }
                 }
             }
         }
@@ -389,6 +388,11 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
                 : javaFile.getVirtualFile().getNameWithoutExtension();
         String fallbackFqcn = packageName.isBlank() ? simpleClassName : packageName + "." + simpleClassName;
         return isPrimaryLine(fallbackFqcn, lineNumber);
+    }
+
+    private static String stripInnerClass(String fqcn) {
+        int dollar = fqcn.indexOf('$');
+        return dollar > 0 ? fqcn.substring(0, dollar) : fqcn;
     }
 
     private static Color withAlpha(Color color, int alpha) {

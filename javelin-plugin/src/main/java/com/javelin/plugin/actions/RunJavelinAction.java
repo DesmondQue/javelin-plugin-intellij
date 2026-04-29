@@ -17,7 +17,6 @@ import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.javelin.plugin.config.JavelinUiSettings;
-import com.javelin.plugin.model.ConfidenceLevel;
 import com.javelin.plugin.model.LocalizationResult;
 import com.javelin.plugin.model.MethodResult;
 import com.javelin.plugin.model.StatementResult;
@@ -124,19 +123,6 @@ public final class RunJavelinAction extends AnAction {
                                             results.size(), seconds, mr.fullyQualifiedClass(), mr.methodName(), mr.score());
                                 };
                         notifyUser(project, summary, NotificationType.INFORMATION);
-
-                        ConfidenceLevel confidence = ConfidenceLevel.fromResults(results);
-                        if (confidence == ConfidenceLevel.LOW) {
-                            notifyUser(project,
-                                    "Javelin confidence is LOW - suspicion is spread across many locations. " +
-                                    "Add more targeted failing tests or check test coverage to improve localization.",
-                                    NotificationType.WARNING);
-                        } else if (confidence == ConfidenceLevel.MEDIUM) {
-                            notifyUser(project,
-                                    "Javelin confidence is MEDIUM - review the top-ranked locations first. " +
-                                    "Refining your test suite may help narrow the fault further.",
-                                    NotificationType.WARNING);
-                        }
                     } catch (Exception ex) {
                         notifyUser(project, ex.getMessage() == null ? "Javelin analysis failed." : ex.getMessage(), NotificationType.ERROR);
                     } finally {

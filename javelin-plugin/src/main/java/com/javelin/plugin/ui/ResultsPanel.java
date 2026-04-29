@@ -57,10 +57,10 @@ import com.intellij.ui.treeStructure.treetable.ListTreeTableModelOnColumns;
 import com.intellij.ui.treeStructure.treetable.TreeTable;
 import com.intellij.ui.treeStructure.treetable.TreeTableModel;
 import com.intellij.util.ui.ColumnInfo;
-import com.javelin.plugin.model.ConfidenceLevel;
 import com.javelin.plugin.model.LocalizationResult;
 import com.javelin.plugin.model.MethodResult;
 import com.javelin.plugin.model.RankGroup;
+import com.javelin.plugin.model.RunStats;
 import com.javelin.plugin.model.StatementResult;
 import com.javelin.plugin.service.JavelinService;
 
@@ -69,8 +69,8 @@ public final class ResultsPanel extends JPanel {
     private final Project project;
     private final DefaultMutableTreeNode rootNode;
     private final JBTextField filterField;
+    private final JLabel statsLabel;
     private final JLabel statusLabel;
-    private final JLabel confidenceLabel;
     private TreeTable treeTable;
     private ListTreeTableModelOnColumns treeTableModel;
     private boolean allExpanded = false;
@@ -133,23 +133,25 @@ public final class ResultsPanel extends JPanel {
         topRight.add(expandCollapseButton, BorderLayout.WEST);
         topRight.add(clearResultsButton, BorderLayout.EAST);
 
-        JPanel top = new JPanel(new BorderLayout(6, 0));
-        top.setBorder(com.intellij.util.ui.JBUI.Borders.empty(6, 8, 4, 8));
-        top.add(filterField, BorderLayout.CENTER);
-        top.add(topRight, BorderLayout.EAST);
+        this.statsLabel = new JLabel("");
+        this.statsLabel.setBorder(com.intellij.util.ui.JBUI.Borders.empty(0, 8, 4, 8));
+        this.statsLabel.setVisible(false);
+        this.statsLabel.setForeground(javax.swing.UIManager.getColor("Label.disabledForeground"));
+
+        JPanel filterRow = new JPanel(new BorderLayout(6, 0));
+        filterRow.setBorder(com.intellij.util.ui.JBUI.Borders.empty(6, 8, 2, 8));
+        filterRow.add(filterField, BorderLayout.CENTER);
+        filterRow.add(topRight, BorderLayout.EAST);
+
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(filterRow, BorderLayout.NORTH);
+        top.add(statsLabel, BorderLayout.SOUTH);
 
         JPanel bottom = new JPanel(new BorderLayout());
         bottom.setBorder(com.intellij.util.ui.JBUI.Borders.empty(4, 8, 6, 8));
         this.statusLabel = new JLabel("No results - run Javelin Analysis first");
         this.statusLabel.setToolTipText("Summary of the current analysis results");
-        this.confidenceLabel = new JLabel("");
-        this.confidenceLabel.setToolTipText("How focused the suspicion is on the top-ranked group");
-
-        JPanel bottomLeft = new JPanel();
-        bottomLeft.setLayout(new javax.swing.BoxLayout(bottomLeft, javax.swing.BoxLayout.Y_AXIS));
-        bottomLeft.add(statusLabel);
-        bottomLeft.add(confidenceLabel);
-        bottom.add(bottomLeft, BorderLayout.WEST);
+        bottom.add(statusLabel, BorderLayout.WEST);
 
         JButton exportButton = new JButton("Export to CSV");
         exportButton.addActionListener(e -> exportFilteredRows());
@@ -256,26 +258,71 @@ public final class ResultsPanel extends JPanel {
         currentResults = List.copyOf(results);
         currentGroups = buildRankGroups(results);
         rebuildTree(currentGroups);
+        updateStatsLabel();
         updateStatusLabel(results.size());
-        updateConfidenceLabel(results);
     }
 
-    private void updateConfidenceLabel(List<LocalizationResult> results) {
-        if (results.isEmpty()) {
-            confidenceLabel.setText("");
+    private void updateStatsLabel() {
+        JavelinService service = project.getService(JavelinService.class);
+        RunStats stats = service == null ? null : service.getLastRunStats();
+        if (stats == null || stats.totalTests() == 0) {
+            statsLabel.setVisible(false);
             return;
         }
-        ConfidenceLevel level = ConfidenceLevel.fromResults(results);
-        double fraction = ConfidenceLevel.topRankFraction(results);
-        int pct = (int) Math.round(fraction * 100.0);
-        String text = "Confidence: " + level.name() + " (top rank: " + pct + "%)";
-        confidenceLabel.setText(text);
-        confidenceLabel.setForeground(switch (level) {
-            case HIGH    -> new Color(0, 140, 0);
-            case MEDIUM  -> new Color(200, 120, 0);
-            case LOW     -> new Color(180, 0, 0);
-            case UNKNOWN -> javax.swing.UIManager.getColor("Label.foreground");
-        });
+        StringBuilder sb = new StringBuilder();
+        sb.append("Tests: ").append(stats.totalTests())
+                .append(" (").append(stats.passedTests()).append(" passed, ")
+                .append(stats.failedTests()).append(" failed)")
+                .append("  |  Coverage: ").append(stats.linesCovered())
+                .append("/").append(stats.linesTracked()).append(" lines");
+
+        long totalMs = stats.testExecMs() + stats.ochiaiMs() + stats.mutationMs();
+        if (totalMs > 0) {
+            sb.append("  |  ").append(formatDuration(totalMs));
+        }
+
+        if (stats.hasMutationData()) {
+            sb.append("  |  Mutants: ").append(stats.mutantsTotal())
+                    .append(" (").append(stats.mutantsKilled()).append(" killed, ")
+                    .append(stats.mutantsSurvived()).append(" survived)");
+        }
+
+        statsLabel.setText(sb.toString());
+        statsLabel.setToolTipText(buildStatsTooltip(stats));
+        statsLabel.setVisible(true);
+    }
+
+    private static String buildStatsTooltip(RunStats stats) {
+        StringBuilder sb = new StringBuilder("<html>");
+        sb.append("<b>Test Execution</b><br/>")
+                .append("Total: ").append(stats.totalTests())
+                .append(" | Passed: ").append(stats.passedTests())
+                .append(" | Failed: ").append(stats.failedTests())
+                .append("<br/><br/><b>Coverage</b><br/>")
+                .append("Lines tracked: ").append(stats.linesTracked())
+                .append(" | Lines covered: ").append(stats.linesCovered());
+
+        if (stats.hasMutationData()) {
+            sb.append("<br/><br/><b>Mutation Analysis</b><br/>")
+                    .append("Total: ").append(stats.mutantsTotal())
+                    .append(" | Killed: ").append(stats.mutantsKilled())
+                    .append(" | Survived: ").append(stats.mutantsSurvived())
+                    .append(" | No coverage: ").append(stats.mutantsNoCoverage());
+        }
+
+        sb.append("<br/><br/><b>Timing</b><br/>")
+                .append("Test execution: ").append(formatDuration(stats.testExecMs()));
+        if (stats.hasMutationData()) {
+            sb.append(" | Mutation: ").append(formatDuration(stats.mutationMs()));
+        }
+        sb.append(" | Calculation: ").append(formatDuration(stats.ochiaiMs()));
+        sb.append("</html>");
+        return sb.toString();
+    }
+
+    private static String formatDuration(long ms) {
+        if (ms < 1000) return ms + "ms";
+        return String.format(Locale.ROOT, "%.2fs", ms / 1000.0);
     }
 
     private List<RankGroup> buildRankGroups(List<LocalizationResult> results) {
@@ -416,7 +463,6 @@ public final class ResultsPanel extends JPanel {
     }
 
     private void updateStatusLabel(int count) {
-        JavelinService service = project.getService(JavelinService.class);
         if (count <= 0) {
             statusLabel.setText("No results - run Javelin Analysis first");
             return;
@@ -424,14 +470,7 @@ public final class ResultsPanel extends JPanel {
         boolean hasMethodResults = currentResults.stream().anyMatch(r -> r instanceof MethodResult);
         String itemWord = hasMethodResults ? "methods" : "lines";
         String groupWord = currentGroups.size() == 1 ? "rank group" : "rank groups";
-        long nanos = service == null ? -1L : service.getLastRunDurationNanos();
-        if (nanos > 0) {
-            double seconds = nanos / 1_000_000_000.0;
-            statusLabel.setText(String.format(Locale.ROOT, "%d suspicious %s | %d %s | %.2fs",
-                    count, itemWord, currentGroups.size(), groupWord, seconds));
-        } else {
-            statusLabel.setText(count + " suspicious " + itemWord + " | " + currentGroups.size() + " " + groupWord);
-        }
+        statusLabel.setText(count + " suspicious " + itemWord + " | " + currentGroups.size() + " " + groupWord);
     }
 
     private void installNavigationHandlers() {
@@ -498,12 +537,16 @@ public final class ResultsPanel extends JPanel {
         }
         int targetLine = switch (result) {
             case StatementResult sr -> sr.lineNumber();
-            case MethodResult mr -> (mr.firstLine() < mr.lastLine())
-                    ? Math.max(1, mr.firstLine() - 1) : mr.firstLine();
+            case MethodResult mr -> mr.firstLine();
         };
         com.intellij.openapi.application.ReadAction.nonBlocking(() -> {
+            String fqcn = result.fullyQualifiedClass();
+            int dollar = fqcn.indexOf('$');
+            if (dollar > 0) {
+                fqcn = fqcn.substring(0, dollar);
+            }
             PsiClass psiClass = JavaPsiFacade.getInstance(project)
-                    .findClass(result.fullyQualifiedClass(), GlobalSearchScope.projectScope(project));
+                    .findClass(fqcn, GlobalSearchScope.projectScope(project));
             if (psiClass == null || psiClass.getContainingFile() == null
                     || psiClass.getContainingFile().getVirtualFile() == null) {
                 return null;

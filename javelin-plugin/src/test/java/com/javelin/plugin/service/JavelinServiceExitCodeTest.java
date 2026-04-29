@@ -13,9 +13,9 @@ class JavelinServiceExitCodeTest {
         "2, No failing tests",
         "3, target classes",
         "4, test classes",
-        "5, source directory",
-        "6, unexpected error",
-        "7, timed out"
+        "5, coverage",
+        "6, mutation",
+        "7, write output"
     })
     void describeExitCodeContainsKeyPhrase(int code, String phrase) {
         String message = JavelinService.describeExitCode(code);

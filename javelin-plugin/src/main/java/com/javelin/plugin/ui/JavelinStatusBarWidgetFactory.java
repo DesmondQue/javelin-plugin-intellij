@@ -150,7 +150,7 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
                 int resultCount = service.getLastResults() == null ? 0 : service.getLastResults().size();
                 sb.append("<br><b>Last run:</b> ")
                         .append(String.format(Locale.ROOT, "%.2fs", seconds))
-                        .append(" \u2014 ").append(resultCount).append(" suspicious lines<br>");
+                        .append(" | ").append(resultCount).append(" suspicious lines<br>");
             }
             sb.append("</body></html>");
             label.setToolTipText(sb.toString());

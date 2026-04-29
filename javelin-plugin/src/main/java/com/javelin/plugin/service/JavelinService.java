@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
@@ -23,6 +24,7 @@ import com.javelin.plugin.bridge.CoreProcessRunner;
 import com.javelin.plugin.bridge.CsvResultParser;
 import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.model.LocalizationResult;
+import com.javelin.plugin.model.RunStats;
 import com.javelin.plugin.ui.JavelinResultsListener;
 import com.javelin.plugin.util.JavaVersionParser;
 
@@ -47,6 +49,7 @@ public final class JavelinService {
     private final CoreProcessRunner processRunner = new CoreProcessRunner();
     private final CsvResultParser csvParser = new CsvResultParser();
     private List<LocalizationResult> lastResults = List.of();
+    private volatile RunStats lastRunStats;
     private volatile long lastRunDurationNanos = -1L;
     private volatile boolean running;
     private volatile Integer cachedJavaMajor;
@@ -78,11 +81,20 @@ public final class JavelinService {
 
             Path jvmHome = resolveJvmHome();
 
-            Consumer<String> stderrCallback = phaseCallback == null ? null : line -> {
-                if (line.startsWith("[javelin]")) {
+            Map<String, String> statMap = RunStats.newStatMap();
+            Consumer<String> stderrCallback = line -> {
+                if (line.startsWith("[javelin-stat] ")) {
+                    String payload = line.substring("[javelin-stat] ".length());
+                    int eq = payload.indexOf('=');
+                    if (eq > 0) {
+                        statMap.put(payload.substring(0, eq), payload.substring(eq + 1));
+                    }
+                } else if (phaseCallback != null && line.startsWith("[javelin]")) {
                     phaseCallback.accept("Javelin: " + line.substring("[javelin]".length()).strip());
                 }
             };
+
+            Path projectDir = project.getBasePath() != null ? Path.of(project.getBasePath()) : null;
 
             CoreProcessResult processResult = processRunner.run(
                     coreJar,
@@ -97,7 +109,8 @@ public final class JavelinService {
                     jvmHome,
                     request.granularity(),
                     request.rankingStrategy(),
-                    stderrCallback
+                    stderrCallback,
+                    projectDir
             );
 
             if (processResult.exitCode() != 0) {
@@ -114,6 +127,7 @@ public final class JavelinService {
 
             List<LocalizationResult> parsed = csvParser.parse(outputPath);
             lastResults = Collections.unmodifiableList(new ArrayList<>(parsed));
+            lastRunStats = RunStats.fromStatMap(statMap);
             lastRunDurationNanos = System.nanoTime() - start;
             project.getMessageBus().syncPublisher(JavelinResultsListener.TOPIC).resultsUpdated(lastResults);
             return lastResults;
@@ -128,18 +142,23 @@ public final class JavelinService {
 
     public static String describeExitCode(int code) {
         return switch (code) {
+            case 1 -> "A general error occurred inside javelin-core. Check the log for details.";
             case 2 -> "No failing tests were found. Ensure your test suite has at least one failing test.";
             case 3 -> "The target classes directory was not found or is empty.";
             case 4 -> "The test classes directory was not found or is empty.";
-            case 5 -> "The source directory was not found or is empty (required for ochiai-ms).";
-            case 6 -> "An unexpected error occurred inside javelin-core. Check the log for details.";
-            case 7 -> "Analysis timed out. Consider reducing the number of test cases.";
+            case 5 -> "Coverage execution failed. No .exec files were generated. Check for JaCoCo agent errors.";
+            case 6 -> "Mutation analysis failed. Check the log for PITest errors.";
+            case 7 -> "Failed to write output results.";
             default -> "javelin-core failed with exit code " + code + ".";
         };
     }
 
     public List<LocalizationResult> getLastResults() {
         return lastResults;
+    }
+
+    public RunStats getLastRunStats() {
+        return lastRunStats;
     }
 
     public long getLastRunDurationNanos() {
@@ -156,6 +175,7 @@ public final class JavelinService {
 
     public void clearResults() {
         lastResults = List.of();
+        lastRunStats = null;
         lastRunDurationNanos = -1L;
         project.getMessageBus().syncPublisher(JavelinResultsListener.TOPIC).resultsUpdated(lastResults);
     }

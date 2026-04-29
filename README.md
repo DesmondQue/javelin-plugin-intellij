@@ -12,7 +12,7 @@ Javelin wraps the [javelin-cli](https://github.com/DesmondQue/javelin-cli) engin
 
 | Requirement | Details |
 |---|---|
-| **IntelliJ IDEA** | 2025.1 (Minimum) - Community or Ultimate |
+| **IntelliJ IDEA** | 2025.1 -- 2025.3.x (Community or Ultimate) |
 | **Java project** | The project must be a compiled Java project with JUnit tests |
 | **At least 1 failing test** | SBFL requires at least one failing test to localize faults |
 
@@ -24,7 +24,7 @@ Javelin wraps the [javelin-cli](https://github.com/DesmondQue/javelin-cli) engin
 
 ### Install from Disk
 
-1. Download the latest `javelin-plugin-0.1.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page (or build from source).
+1. Download the latest `javelin-plugin-0.1.2.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page (or build from source).
 2. In IntelliJ IDEA, go to **Settings → Plugins → ⚙️ → Install Plugin from Disk…**
 3. Select the `.zip` file and click **OK**.
 4. Restart IntelliJ IDEA when prompted.
@@ -41,7 +41,7 @@ cd ../javelin-plugin
 ./gradlew buildPlugin --no-daemon
 ```
 
-The distributable ZIP will be at `build/distributions/javelin-plugin-0.1.0.zip`.
+The distributable ZIP will be at `build/distributions/javelin-plugin-0.1.2.zip`.
 
 ### Run in Development Mode
 
@@ -63,9 +63,14 @@ The Javelin tool window (bottom of the IDE) has a split layout:
   - **Source directory** - Java source root (required for Ochiai-MS)
   - **Extra classpath** - Additional runtime dependencies (passed as `-c` to javelin-core)
   - **Algorithm** - `ochiai` (default) or `ochiai-ms`
+  - **Granularity** - `statement` (default, ranks individual lines) or `method` (aggregates to methods using max score)
+  - **Ranking** - `dense` (default, recommended for debugging) or `average` (MID formula for SBFL evaluation and EXAM scores)
   - **Threads** - Parallel test execution threads (defaults to CPU cores)
+  - **JVM home** - Override the JVM used for test subprocesses (defaults to the project SDK)
   - **Offline mode** - Force offline bytecode instrumentation (for projects using mockito-inline, bytebuddy-agent, etc.)
 - **Right panel** - Results view (see below)
+
+Click **Auto-Detect** to automatically resolve target, test, and source directories as well as the module classpath for both Gradle and Maven project layouts.
 
 Fields marked with `*` are required. Paths are auto-detected on panel load (with a notification showing what was found) and can be overridden manually.
 
@@ -88,18 +93,19 @@ Results appear in a **TreeTable** grouped by rank:
 
 | Column | Description |
 |---|---|
-| **Name** | Rank group header (expandable) or fully qualified class name |
-| **Line** | Source line number |
-| **Score** | Ochiai suspiciousness score (0.0 – 1.0) |
+| **Name** | Rank group header (expandable) or fully qualified class name (statement) / `Class#method` (method-level) |
+| **Line** | Source line number (statement) or first--last line range (method-level) |
+| **Score** | Ochiai suspiciousness score (0.0 -- 1.0) |
 | **Band** | Severity band with colored indicator (Critical / High / Medium / Low) |
 | **Top-N** | Cumulative position in ranked list |
 
 Features:
-- **Sort** - Click any column header to sort (▲ ascending / ▼ descending)
-- **Filter** - Type in the filter field to narrow by class name
+- **Sort** - Click any column header to sort (ascending / descending)
+- **Filter** - Type in the filter field to narrow by class or method name
 - **Navigate** - Double-click or press `Enter` to jump to the suspicious line in the editor
 - **Context menu** - Right-click for Copy and Export options
-- **Export** - Export filtered results to CSV via the bottom-right button
+- **Export** - Export filtered results to CSV (includes rank, class, line, score, percentile, and band classification)
+- **Statistics bar** - Displays test counts (passed/failed), coverage metrics, execution timing, and mutation data (for ochiai-ms)
 
 ### Visual Indicators
 
@@ -135,9 +141,16 @@ The status bar widget (bottom-right) shows project readiness at a glance:
 
 **Click** the widget to open the Javelin tool window.
 
+### Persistent Settings
+
+Configure defaults via **Settings > Tools > Javelin**. Saved defaults persist across sessions and are restored each time the tool window opens. Settings include:
+- Algorithm, granularity, and ranking strategy
+- Thread count and JVM home
+- Visualization preferences (highlighting, gutter icons, error stripes, visible bands)
+
 ### Clearing Results
 
-**Tools → Clear Javelin Results** removes all highlights, gutter icons, stripe marks, and result data.
+**Tools > Clear Javelin Results** removes all highlights, gutter icons, stripe marks, and result data.
 
 ---
 
@@ -148,7 +161,16 @@ The status bar widget (bottom-right) shows project readiness at a glance:
 | **Ochiai** | `ochiai` | Standard SBFL using test pass/fail spectra and code coverage |
 | **Ochiai-MS** | `ochiai-ms` | Experimental — integrates mutation testing (PITest) into the SBFL pipeline; requires a source directory |
 
-Both algorithms are available in the CLI ([javelin-cli](https://github.com/DesmondQue/javelin-cli)) and the plugin. See the CLI's [ALGORITHMS.md](https://github.com/DesmondQue/javelin-cli/blob/main/javelin-core/docs/ALGORITHMS.md) for formulas and details.
+Both algorithms are available in the CLI ([javelin-cli](https://github.com/DesmondQue/javelin-cli)) and the plugin.
+
+### Granularity & Ranking
+
+| Option | Values | Description |
+|---|---|---|
+| **Granularity** | `statement` (default), `method` | Statement ranks individual lines; method aggregates to methods using max score |
+| **Ranking** | `dense` (default), `average` | Dense gives clear integer ranks for debugging; average (MID) produces fractional ranks for SBFL evaluation (EXAM scores, Top-N metrics) |
+
+See the CLI's [ALGORITHMS.md](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md) for formulas and details.
 
 ---
 
@@ -157,8 +179,9 @@ Both algorithms are available in the CLI ([javelin-cli](https://github.com/Desmo
 1. **Coverage Collection** - Runs JUnit tests with JaCoCo instrumentation to build per-test line coverage
 2. **Spectrum Analysis** - Constructs a hit matrix of which lines are executed by passing vs. failing tests
 3. **Suspiciousness Scoring** - Computes Ochiai (or Ochiai-MS) scores for each line
-4. **Ranking & Grouping** - Ranks lines by score and groups them by rank for display
-5. **Report Generation** - Exports ranked results to CSV and highlights them in the IDE
+4. **Method Aggregation** (if method-level) - Aggregates line scores to methods using the maximum score per method
+5. **Ranking & Grouping** - Ranks lines or methods by score (dense or average) and groups them by rank for display
+6. **Report Generation** - Exports ranked results to CSV and highlights them in the IDE
 
 ---
 

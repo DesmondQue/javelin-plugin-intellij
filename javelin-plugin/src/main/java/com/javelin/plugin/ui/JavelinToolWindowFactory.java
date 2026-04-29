@@ -23,12 +23,14 @@ import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
+import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.service.JavelinService;
 
 public final class JavelinToolWindowFactory implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
+        JavelinUiSettings.ensureDefaultsRestored(project);
         ConfigurationPanel configPanel = new ConfigurationPanel(project);
         ResultsPanel resultsPanel = new ResultsPanel(project);
         JavelinService service = project.getService(JavelinService.class);
@@ -53,7 +55,7 @@ public final class JavelinToolWindowFactory implements ToolWindowFactory {
         titleActions.add(new GutterToggleAction(project));
         
         DefaultActionGroup bandGroup = new DefaultActionGroup("Suspicion Bands", true);
-        bandGroup.getTemplatePresentation().setIcon(new BandGroupIcon());
+        bandGroup.getTemplatePresentation().setIcon(AllIcons.General.Filter);
         for (JavelinHighlightProvider.SuspicionBand band : JavelinHighlightProvider.SuspicionBand.values()) {
             bandGroup.add(new BandToggleAction(project, band));
         }
@@ -98,7 +100,7 @@ public final class JavelinToolWindowFactory implements ToolWindowFactory {
 
     private static final class GutterToggleAction extends ProviderToggleAction {
         private GutterToggleAction(Project project) {
-            super(project, "Gutter Icons", new ColoredDotIcon(new Color(0xF5, 0x7C, 0x00)));
+            super(project, "Gutter Icons", AllIcons.Actions.ToggleVisibility);
         }
 
         @Override
@@ -151,40 +153,6 @@ public final class JavelinToolWindowFactory implements ToolWindowFactory {
             Color old = g.getColor();
             g.setColor(color);
             g.fillOval(x + 2, y + 2, SIZE - 4, SIZE - 4);
-            g.setColor(old);
-        }
-
-        @Override
-        public int getIconWidth() {
-            return SIZE;
-        }
-
-        @Override
-        public int getIconHeight() {
-            return SIZE;
-        }
-    }
-
-    private static final class BandGroupIcon implements Icon {
-        private static final int SIZE = 12;
-        private static final Color[] COLORS = {
-            new Color(0xD3, 0x2F, 0x2F),
-            new Color(0xF5, 0x7C, 0x00),
-            new Color(0xFB, 0xC0, 0x2D),
-            new Color(0x38, 0x8E, 0x3C)
-        };
-
-        @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            int barHeight = 2;
-            int gap = 1;
-            int totalHeight = COLORS.length * barHeight + (COLORS.length - 1) * gap;
-            int startY = y + (SIZE - totalHeight) / 2;
-            Color old = g.getColor();
-            for (int i = 0; i < COLORS.length; i++) {
-                g.setColor(COLORS[i]);
-                g.fillRect(x + 1, startY + i * (barHeight + gap), SIZE - 2, barHeight);
-            }
             g.setColor(old);
         }
 
