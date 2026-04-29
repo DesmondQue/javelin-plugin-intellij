@@ -132,7 +132,7 @@ The status bar widget (bottom-right) shows project readiness at a glance:
 
 | Icon | Meaning |
 |---|---|
-| **Javelin ✓** | All checks passed — ready to run |
+| **Javelin ✓** | All checks passed -- ready to run |
 | **Javelin !** | Some checks failing |
 | **Javelin –** | No checks passing |
 | **Javelin ↻** | Analysis running |
@@ -159,7 +159,7 @@ Configure defaults via **Settings > Tools > Javelin**. Saved defaults persist ac
 | Algorithm | Flag | Description |
 |---|---|---|
 | **Ochiai** | `ochiai` | Standard SBFL using test pass/fail spectra and code coverage |
-| **Ochiai-MS** | `ochiai-ms` | Experimental — integrates mutation testing (PITest) into the SBFL pipeline; requires a source directory |
+| **Ochiai-MS** | `ochiai-ms` | Experimental -- integrates mutation testing (PITest) into the SBFL pipeline; requires a source directory |
 
 Both algorithms are available in the CLI ([javelin-cli](https://github.com/DesmondQue/javelin-cli)) and the plugin.
 
