@@ -44,7 +44,7 @@ public final class ConfigurationPanel extends JPanel {
     private final ComboBox<String> algorithmCombo = new ComboBox<>(new String[]{"ochiai", "ochiai-ms"});
     private final ComboBox<String> granularityCombo = new ComboBox<>(new String[]{"statement", "method"});
     private final ComboBox<String> rankingCombo = new ComboBox<>(new String[]{"dense", "average"});
-    private final JBLabel rankingLabel = new JBLabel("Ranking:");
+    private final JBLabel rankingLabel = new JBLabel("* Ranking:");
     private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
     private final JCheckBox offlineCheckbox = new JCheckBox("Force offline mode");
@@ -138,11 +138,11 @@ public final class ConfigurationPanel extends JPanel {
         addRow(formPanel, "* Test classes:", testField, row++);
         addRow(formPanel, "* Algorithm:", algorithmCombo, row++);
         addRow(formPanel, sourceDirLabel, sourceField, row++);
-        addRow(formPanel, "Granularity:", granularityCombo, row++);
+        addRow(formPanel, "* Granularity:", granularityCombo, row++);
         addRow(formPanel, rankingLabel, rankingCombo, row++);
         addRow(formPanel, "Extra classpath:", classpathField, row++);
         addRow(formPanel, "Override JVM home:", jvmHomeField, row++);
-        addRow(formPanel, "Threads:", threadsSpinner, row++);
+        addRow(formPanel, "* Threads:", threadsSpinner, row++);
         addRow(formPanel, "", offlineCheckbox, row++);
 
         GridBagConstraints spacer = new GridBagConstraints();

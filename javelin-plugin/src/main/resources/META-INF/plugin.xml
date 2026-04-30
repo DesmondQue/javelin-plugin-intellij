@@ -65,6 +65,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>0.2.1</h3>
+        <ul>
+          <li>Added required-field asterisks to Granularity, Ranking, and Threads labels</li>
+          <li>Updated gutter icons and plugin icons</li>
+          <li>Updated javelin-cli submodule</li>
+        </ul>
         <h3>0.1.2</h3>
         <ul>
           <li>Added statement-level and method-level granularity options</li>
@@ -97,6 +103,7 @@
         <statusBarWidgetFactory implementation="com.javelin.plugin.ui.JavelinStatusBarWidgetFactory" id="Javelin.Status"/>
         <toolWindow id="Javelin"
                     anchor="bottom"
+                    icon="/icons/javelin.svg"
                     factoryClass="com.javelin.plugin.ui.JavelinToolWindowFactory"/>
         <codeInsight.lineMarkerProvider
             language="JAVA"
