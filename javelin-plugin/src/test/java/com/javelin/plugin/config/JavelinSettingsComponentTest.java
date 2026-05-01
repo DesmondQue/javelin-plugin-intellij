@@ -137,4 +137,35 @@ class JavelinSettingsComponentTest {
         component.setThreads(0);
         assertTrue(component.getThreads() >= 1);
     }
+
+    @Test
+    void setAndGetTimeoutMinutes() {
+        component.setTimeoutMinutes(5);
+        assertEquals(5, component.getTimeoutMinutes());
+    }
+
+    @Test
+    void timeoutMinutesDefaultsToZero() {
+        component.resetToDefaults();
+        assertEquals(0, component.getTimeoutMinutes());
+    }
+
+    @Test
+    void timeoutMinutesClampsNegativeToZero() {
+        component.setTimeoutMinutes(-5);
+        assertEquals(0, component.getTimeoutMinutes());
+    }
+
+    @Test
+    void timeoutMinutesClampsAboveMax() {
+        component.setTimeoutMinutes(200);
+        assertEquals(120, component.getTimeoutMinutes());
+    }
+
+    @Test
+    void resetToDefaultsSetsTimeout() {
+        component.setTimeoutMinutes(10);
+        component.resetToDefaults();
+        assertEquals(JavelinUiSettings.DEFAULT_TIMEOUT_MINUTES, component.getTimeoutMinutes());
+    }
 }

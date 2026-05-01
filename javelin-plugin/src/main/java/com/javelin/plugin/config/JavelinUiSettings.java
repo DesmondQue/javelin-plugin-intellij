@@ -22,12 +22,14 @@ public final class JavelinUiSettings {
     public static final String KEY_JVM_HOME = "javelin.ui.jvmHome";
     public static final String KEY_GRANULARITY = "javelin.ui.granularity";
     public static final String KEY_RANKING_STRATEGY = "javelin.ui.rankingStrategy";
+    public static final String KEY_TIMEOUT_MINUTES = "javelin.ui.timeoutMinutes";
 
     public static final String DEFAULT_ALGORITHM = "ochiai";
     public static final String DEFAULT_GRANULARITY = "statement";
     public static final String DEFAULT_RANKING_STRATEGY = "dense";
     public static final String DEFAULT_VISIBLE_BANDS = "RED,ORANGE,YELLOW,GREEN";
     public static final String DEFAULT_JVM_HOME = "";
+    public static final int DEFAULT_TIMEOUT_MINUTES = 0;
     public static final boolean DEFAULT_GUTTER_ENABLED = true;
     public static final boolean DEFAULT_HIGHLIGHT_ENABLED = true;
     public static final boolean DEFAULT_STRIPE_ENABLED = true;
@@ -95,6 +97,14 @@ public final class JavelinUiSettings {
         getProperties(project).setValue(defaultKeyFor(KEY_JVM_HOME), jvmHome == null ? DEFAULT_JVM_HOME : jvmHome, DEFAULT_JVM_HOME);
     }
 
+    public static int getDefaultTimeoutMinutes(Project project) {
+        return Math.max(0, getProperties(project).getInt(defaultKeyFor(KEY_TIMEOUT_MINUTES), DEFAULT_TIMEOUT_MINUTES));
+    }
+
+    public static void setDefaultTimeoutMinutes(Project project, int minutes) {
+        getProperties(project).setValue(defaultKeyFor(KEY_TIMEOUT_MINUTES), Math.max(0, minutes), DEFAULT_TIMEOUT_MINUTES);
+    }
+
     public static boolean isDefaultHighlightEnabled(Project project) {
         return getProperties(project).getBoolean(defaultKeyFor(KEY_HIGHLIGHT_ENABLED), DEFAULT_HIGHLIGHT_ENABLED);
     }
@@ -157,6 +167,7 @@ public final class JavelinUiSettings {
         setDefaultRankingStrategy(project, getRankingStrategy(project));
         setDefaultMaxThreads(project, getMaxThreads(project));
         setDefaultJvmHome(project, getJvmHome(project));
+        setDefaultTimeoutMinutes(project, getTimeoutMinutes(project));
         setDefaultHighlightEnabled(project, isHighlightEnabled(project));
         setDefaultGutterEnabled(project, isGutterEnabled(project));
         setDefaultStripeEnabled(project, isStripeEnabled(project));
@@ -170,6 +181,7 @@ public final class JavelinUiSettings {
         setRankingStrategy(project, getDefaultRankingStrategy(project));
         setMaxThreads(project, getDefaultMaxThreads(project));
         setJvmHome(project, getDefaultJvmHome(project));
+        setTimeoutMinutes(project, getDefaultTimeoutMinutes(project));
         setHighlightEnabled(project, isDefaultHighlightEnabled(project));
         setGutterEnabled(project, isDefaultGutterEnabled(project));
         setStripeEnabled(project, isDefaultStripeEnabled(project));
@@ -292,6 +304,14 @@ public final class JavelinUiSettings {
         if ("average".equals(rankingStrategy) || "dense".equals(rankingStrategy)) {
             getProperties(project).setValue(KEY_RANKING_STRATEGY, rankingStrategy, DEFAULT_RANKING_STRATEGY);
         }
+    }
+
+    public static int getTimeoutMinutes(Project project) {
+        return Math.max(0, getProperties(project).getInt(KEY_TIMEOUT_MINUTES, DEFAULT_TIMEOUT_MINUTES));
+    }
+
+    public static void setTimeoutMinutes(Project project, int minutes) {
+        getProperties(project).setValue(KEY_TIMEOUT_MINUTES, Math.max(0, minutes), DEFAULT_TIMEOUT_MINUTES);
     }
 
     private static int clampThreads(int threads) {

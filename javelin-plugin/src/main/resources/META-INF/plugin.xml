@@ -65,6 +65,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>0.3.0</h3>
+        <ul>
+          <li>Cancel button now stops Ochiai/Ochiai-MS analysis and kills the process tree</li>
+          <li>Added configurable timeout (0-120 minutes) in Settings and tool window</li>
+          <li>Updated javelin-cli submodule to v1.4.0-beta</li>
+        </ul>
         <h3>0.2.2</h3>
         <ul>
           <li>Fixed test discovery missing Test* prefix naming convention (e.g. JacksonDatabind)</li>

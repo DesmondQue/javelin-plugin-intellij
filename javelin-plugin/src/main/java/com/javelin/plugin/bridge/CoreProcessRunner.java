@@ -13,6 +13,8 @@ import com.intellij.execution.process.ProcessAdapter;
 import com.intellij.execution.process.ProcessEvent;
 import com.intellij.execution.process.ProcessOutput;
 import com.intellij.execution.process.ProcessOutputTypes;
+import com.intellij.openapi.progress.ProcessCanceledException;
+import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.util.Key;
 
 public final class CoreProcessRunner {
@@ -74,6 +76,28 @@ public final class CoreProcessRunner {
             String rankingStrategy,
             Consumer<String> stderrLineCallback,
             Path workingDir
+    ) {
+        return run(jarPath, algorithm, targetPath, testPath, outputPath, classpath, threads,
+                sourcePath, offline, jvmHome, granularity, rankingStrategy, stderrLineCallback, workingDir, null, 0L);
+    }
+
+    public CoreProcessResult run(
+            Path jarPath,
+            String algorithm,
+            Path targetPath,
+            Path testPath,
+            Path outputPath,
+            String classpath,
+            int threads,
+            Path sourcePath,
+            boolean offline,
+            Path jvmHome,
+            String granularity,
+            String rankingStrategy,
+            Consumer<String> stderrLineCallback,
+            Path workingDir,
+            ProgressIndicator indicator,
+            long timeoutMs
     ) {
         List<String> command = new ArrayList<>();
         command.add(jbrJavaPath());
@@ -144,10 +168,104 @@ public final class CoreProcessRunner {
                     }
                 });
             }
-            ProcessOutput output = handler.runProcess(0);
-            return new CoreProcessResult(output.getExitCode(), output.getStdout(), output.getStderr());
+
+            boolean needsPolling = indicator != null || timeoutMs > 0;
+            if (!needsPolling) {
+                ProcessOutput output = handler.runProcess(0);
+                return new CoreProcessResult(output.getExitCode(), output.getStdout(), output.getStderr());
+            }
+
+            StringBuilder stdout = new StringBuilder();
+            StringBuilder stderr = new StringBuilder();
+            handler.addProcessListener(new ProcessAdapter() {
+                @Override
+                public void onTextAvailable(ProcessEvent event, Key type) {
+                    if (ProcessOutputTypes.STDOUT.equals(type)) {
+                        stdout.append(event.getText());
+                    } else if (ProcessOutputTypes.STDERR.equals(type)) {
+                        stderr.append(event.getText());
+                    }
+                }
+            });
+
+            handler.startNotify();
+            long startTime = System.currentTimeMillis();
+
+            while (!handler.waitFor(500)) {
+                if (indicator != null && indicator.isCanceled()) {
+                    destroyProcessTree(handler);
+                    throw new ProcessCanceledException();
+                }
+                if (timeoutMs > 0 && (System.currentTimeMillis() - startTime) > timeoutMs) {
+                    destroyProcessTree(handler);
+                    long minutes = timeoutMs / 60_000L;
+                    throw new IllegalStateException(
+                            "Javelin analysis timed out after " + minutes + " minute(s). "
+                            + "Increase the timeout in Settings > Tools > Javelin.");
+                }
+            }
+
+            int exitCode = handler.getProcess().exitValue();
+            return new CoreProcessResult(exitCode, stdout.toString(), stderr.toString());
         } catch (ExecutionException ex) {
             throw new IllegalStateException("Failed to start javelin-core process", ex);
+        }
+    }
+
+    private static void destroyProcessTree(CapturingProcessHandler handler) {
+        Process process = handler.getProcess();
+        process.descendants().forEach(ProcessHandle::destroyForcibly);
+        process.destroyForcibly();
+    }
+
+    public CoreProcessResult runRaw(String[] command, ProgressIndicator indicator, long timeoutMs) {
+        GeneralCommandLine cmd = new GeneralCommandLine(command);
+        cmd.withCharset(java.nio.charset.StandardCharsets.UTF_8);
+        cmd.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
+
+        try {
+            CapturingProcessHandler handler = new CapturingProcessHandler(cmd);
+
+            boolean needsPolling = indicator != null || timeoutMs > 0;
+            if (!needsPolling) {
+                ProcessOutput output = handler.runProcess(0);
+                return new CoreProcessResult(output.getExitCode(), output.getStdout(), output.getStderr());
+            }
+
+            StringBuilder stdout = new StringBuilder();
+            StringBuilder stderr = new StringBuilder();
+            handler.addProcessListener(new ProcessAdapter() {
+                @Override
+                public void onTextAvailable(ProcessEvent event, Key type) {
+                    if (ProcessOutputTypes.STDOUT.equals(type)) {
+                        stdout.append(event.getText());
+                    } else if (ProcessOutputTypes.STDERR.equals(type)) {
+                        stderr.append(event.getText());
+                    }
+                }
+            });
+
+            handler.startNotify();
+            long startTime = System.currentTimeMillis();
+
+            while (!handler.waitFor(500)) {
+                if (indicator != null && indicator.isCanceled()) {
+                    destroyProcessTree(handler);
+                    throw new ProcessCanceledException();
+                }
+                if (timeoutMs > 0 && (System.currentTimeMillis() - startTime) > timeoutMs) {
+                    destroyProcessTree(handler);
+                    long minutes = timeoutMs / 60_000L;
+                    throw new IllegalStateException(
+                            "Javelin analysis timed out after " + minutes + " minute(s). "
+                            + "Increase the timeout in Settings > Tools > Javelin.");
+                }
+            }
+
+            int exitCode = handler.getProcess().exitValue();
+            return new CoreProcessResult(exitCode, stdout.toString(), stderr.toString());
+        } catch (ExecutionException ex) {
+            throw new IllegalStateException("Failed to start process", ex);
         }
     }
 

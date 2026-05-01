@@ -12,6 +12,7 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.compiler.CompilerManager;
+import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
@@ -84,6 +85,9 @@ public final class RunJavelinAction extends AnAction {
 
             service.setRunning(true);
 
+            int timeoutMinutes = JavelinUiSettings.getTimeoutMinutes(project);
+            long timeoutMs = timeoutMinutes > 0 ? timeoutMinutes * 60_000L : 0L;
+
             Task.Backgroundable task = new Task.Backgroundable(project, "Running Javelin Analysis", true) {
                 @Override
                 public void run(@NotNull ProgressIndicator indicator) {
@@ -101,7 +105,7 @@ public final class RunJavelinAction extends AnAction {
                                 offline,
                                 granularity,
                                 rankingStrategy
-                        ), indicator::setText);
+                        ), indicator::setText, indicator, timeoutMs);
 
                         ApplicationManager.getApplication().invokeLater(() -> {
                             ToolWindowManager.getInstance(project).getToolWindow("Javelin").activate(null);
@@ -123,6 +127,8 @@ public final class RunJavelinAction extends AnAction {
                                             results.size(), seconds, mr.fullyQualifiedClass(), mr.methodName(), mr.score());
                                 };
                         notifyUser(project, summary, NotificationType.INFORMATION);
+                    } catch (ProcessCanceledException ex) {
+                        notifyUser(project, "Javelin analysis was cancelled.", NotificationType.INFORMATION);
                     } catch (Exception ex) {
                         notifyUser(project, ex.getMessage() == null ? "Javelin analysis failed." : ex.getMessage(), NotificationType.ERROR);
                     } finally {

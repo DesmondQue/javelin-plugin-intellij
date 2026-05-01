@@ -47,6 +47,7 @@ public final class ConfigurationPanel extends JPanel {
     private final JBLabel rankingLabel = new JBLabel("* Ranking:");
     private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
+    private final JSpinner timeoutSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 120, 1));
     private final JCheckBox offlineCheckbox = new JCheckBox("Force offline mode");
     private final JButton runButton = new JButton("▶ Run Javelin");
     private final JButton autoDetectButton = new JButton("Auto-Detect");
@@ -130,6 +131,11 @@ public final class ConfigurationPanel extends JPanel {
         threadsSpinner.setValue(JavelinUiSettings.getMaxThreads(project));
         threadsSpinner.addChangeListener(e -> JavelinUiSettings.setMaxThreads(project, (Integer) threadsSpinner.getValue()));
         threadsSpinner.setToolTipText("Number of parallel threads for test execution");
+
+        timeoutSpinner.setValue(JavelinUiSettings.getTimeoutMinutes(project));
+        timeoutSpinner.addChangeListener(e -> JavelinUiSettings.setTimeoutMinutes(project, (Integer) timeoutSpinner.getValue()));
+        timeoutSpinner.setToolTipText("Maximum time for analysis in minutes (0 = no limit)");
+
         offlineCheckbox.setToolTipText("Skip dependency resolution and use only the provided classpath");
 
         JPanel formPanel = new JPanel(new GridBagLayout());
@@ -143,6 +149,7 @@ public final class ConfigurationPanel extends JPanel {
         addRow(formPanel, "Extra classpath:", classpathField, row++);
         addRow(formPanel, "Override JVM home:", jvmHomeField, row++);
         addRow(formPanel, "* Threads:", threadsSpinner, row++);
+        addRow(formPanel, "Timeout (min):", timeoutSpinner, row++);
         addRow(formPanel, "", offlineCheckbox, row++);
 
         GridBagConstraints spacer = new GridBagConstraints();
@@ -267,6 +274,7 @@ public final class ConfigurationPanel extends JPanel {
         granularityCombo.setEnabled(!running);
         rankingCombo.setEnabled(!running);
         threadsSpinner.setEnabled(!running);
+        timeoutSpinner.setEnabled(!running);
         offlineCheckbox.setEnabled(!running);
         targetField.setEnabled(!running);
         testField.setEnabled(!running);

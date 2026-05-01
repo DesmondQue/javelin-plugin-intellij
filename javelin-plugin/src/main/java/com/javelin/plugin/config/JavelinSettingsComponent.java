@@ -33,6 +33,7 @@ public final class JavelinSettingsComponent {
     private final ComboBox<String> rankingCombo = new ComboBox<>(new String[]{"dense", "average"});
     private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
+    private final JSpinner timeoutSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 120, 1));
     private final TextFieldWithBrowseButton jvmHomeField = new TextFieldWithBrowseButton();
     private final JCheckBox highlightCheckbox = new JCheckBox("Line background highlighting");
     private final JCheckBox gutterCheckbox = new JCheckBox("Gutter icons");
@@ -62,6 +63,9 @@ public final class JavelinSettingsComponent {
 
         addLabeledRow(formPanel, "Threads:", threadsSpinner, row++);
         threadsSpinner.setToolTipText("Number of parallel threads for test execution");
+
+        addLabeledRow(formPanel, "Timeout (minutes):", timeoutSpinner, row++);
+        timeoutSpinner.setToolTipText("Maximum time for analysis in minutes (0 = no limit)");
 
         addLabeledRow(formPanel, "JVM home override:", jvmHomeField, row++);
         FileChooserDescriptor jvmHomeDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
@@ -144,6 +148,10 @@ public final class JavelinSettingsComponent {
         return (int) threadsSpinner.getValue();
     }
 
+    public int getTimeoutMinutes() {
+        return (int) timeoutSpinner.getValue();
+    }
+
     public String getJvmHome() {
         return jvmHomeField.getText().trim();
     }
@@ -192,6 +200,10 @@ public final class JavelinSettingsComponent {
         threadsSpinner.setValue(Math.max(1, Math.min(threads, maxThreads)));
     }
 
+    public void setTimeoutMinutes(int minutes) {
+        timeoutSpinner.setValue(Math.max(0, Math.min(minutes, 120)));
+    }
+
     public void setJvmHome(String path) {
         jvmHomeField.setText(path == null ? "" : path);
     }
@@ -221,6 +233,7 @@ public final class JavelinSettingsComponent {
         setGranularity(JavelinUiSettings.DEFAULT_GRANULARITY);
         setRankingStrategy(JavelinUiSettings.DEFAULT_RANKING_STRATEGY);
         setThreads(maxThreads);
+        setTimeoutMinutes(JavelinUiSettings.DEFAULT_TIMEOUT_MINUTES);
         setJvmHome(JavelinUiSettings.DEFAULT_JVM_HOME);
         setHighlightEnabled(JavelinUiSettings.DEFAULT_HIGHLIGHT_ENABLED);
         setGutterEnabled(JavelinUiSettings.DEFAULT_GUTTER_ENABLED);

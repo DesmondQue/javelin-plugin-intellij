@@ -16,6 +16,7 @@ import com.intellij.notification.NotificationType;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.Service.Level;
 import com.intellij.openapi.extensions.PluginId;
+import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.ProjectRootManager;
@@ -60,10 +61,15 @@ public final class JavelinService {
     }
 
     public List<LocalizationResult> runAnalysis(RunRequest request) throws IOException {
-        return runAnalysis(request, null);
+        return runAnalysis(request, null, null, 0L);
     }
 
     public List<LocalizationResult> runAnalysis(RunRequest request, Consumer<String> phaseCallback) throws IOException {
+        return runAnalysis(request, phaseCallback, null, 0L);
+    }
+
+    public List<LocalizationResult> runAnalysis(RunRequest request, Consumer<String> phaseCallback,
+                                                 ProgressIndicator indicator, long timeoutMs) throws IOException {
         long start = System.nanoTime();
         ensureJava21OrWarn();
         validateInputPaths(request);
@@ -110,7 +116,9 @@ public final class JavelinService {
                     request.granularity(),
                     request.rankingStrategy(),
                     stderrCallback,
-                    projectDir
+                    projectDir,
+                    indicator,
+                    timeoutMs
             );
 
             if (processResult.exitCode() != 0) {

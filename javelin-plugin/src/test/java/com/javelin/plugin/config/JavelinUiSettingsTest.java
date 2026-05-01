@@ -36,7 +36,8 @@ class JavelinUiSettingsTest {
                 JavelinUiSettings.KEY_VISIBLE_BANDS,
                 JavelinUiSettings.KEY_JVM_HOME,
                 JavelinUiSettings.KEY_GRANULARITY,
-                JavelinUiSettings.KEY_RANKING_STRATEGY
+                JavelinUiSettings.KEY_RANKING_STRATEGY,
+                JavelinUiSettings.KEY_TIMEOUT_MINUTES
         );
         for (String key : allKeys) {
             assertNotNull(key, "Key should not be null");
@@ -55,7 +56,8 @@ class JavelinUiSettingsTest {
                 JavelinUiSettings.KEY_VISIBLE_BANDS,
                 JavelinUiSettings.KEY_JVM_HOME,
                 JavelinUiSettings.KEY_GRANULARITY,
-                JavelinUiSettings.KEY_RANKING_STRATEGY
+                JavelinUiSettings.KEY_RANKING_STRATEGY,
+                JavelinUiSettings.KEY_TIMEOUT_MINUTES
         );
         long distinctCount = allKeys.stream().distinct().count();
         assertEquals(allKeys.size(), distinctCount, "All setting keys must be unique");
@@ -87,6 +89,42 @@ class JavelinUiSettingsTest {
     }
 
     @Test
+    void defaultTimeoutMinutesIsZero() {
+        assertEquals(0, JavelinUiSettings.DEFAULT_TIMEOUT_MINUTES);
+    }
+
+    @Test
+    void timeoutKeyFollowsNamingConvention() {
+        assertNotNull(JavelinUiSettings.KEY_TIMEOUT_MINUTES);
+        assertTrue(JavelinUiSettings.KEY_TIMEOUT_MINUTES.startsWith("javelin.ui."));
+    }
+
+    @Test
+    void timeoutKeyIsDistinctFromOtherKeys() {
+        List<String> otherKeys = List.of(
+                JavelinUiSettings.KEY_GUTTER_ENABLED,
+                JavelinUiSettings.KEY_HIGHLIGHT_ENABLED,
+                JavelinUiSettings.KEY_STRIPE_ENABLED,
+                JavelinUiSettings.KEY_ALGORITHM,
+                JavelinUiSettings.KEY_MAX_THREADS,
+                JavelinUiSettings.KEY_VISIBLE_BANDS,
+                JavelinUiSettings.KEY_JVM_HOME,
+                JavelinUiSettings.KEY_GRANULARITY,
+                JavelinUiSettings.KEY_RANKING_STRATEGY
+        );
+        for (String key : otherKeys) {
+            assertNotEquals(JavelinUiSettings.KEY_TIMEOUT_MINUTES, key);
+        }
+    }
+
+    @Test
+    void timeoutDefaultKeyTransformsCorrectly() {
+        String defaultKey = JavelinUiSettings.defaultKeyFor(JavelinUiSettings.KEY_TIMEOUT_MINUTES);
+        assertTrue(defaultKey.startsWith("javelin.defaults."));
+        assertFalse(defaultKey.contains("javelin.ui."));
+    }
+
+    @Test
     void defaultBooleanSettingsAreTrue() {
         assertTrue(JavelinUiSettings.DEFAULT_GUTTER_ENABLED);
         assertTrue(JavelinUiSettings.DEFAULT_HIGHLIGHT_ENABLED);
@@ -110,7 +148,8 @@ class JavelinUiSettingsTest {
                 JavelinUiSettings.KEY_VISIBLE_BANDS,
                 JavelinUiSettings.KEY_JVM_HOME,
                 JavelinUiSettings.KEY_GRANULARITY,
-                JavelinUiSettings.KEY_RANKING_STRATEGY
+                JavelinUiSettings.KEY_RANKING_STRATEGY,
+                JavelinUiSettings.KEY_TIMEOUT_MINUTES
         );
         for (String uiKey : uiKeys) {
             String defaultKey = JavelinUiSettings.defaultKeyFor(uiKey);
@@ -132,7 +171,8 @@ class JavelinUiSettingsTest {
                 JavelinUiSettings.KEY_VISIBLE_BANDS,
                 JavelinUiSettings.KEY_JVM_HOME,
                 JavelinUiSettings.KEY_GRANULARITY,
-                JavelinUiSettings.KEY_RANKING_STRATEGY
+                JavelinUiSettings.KEY_RANKING_STRATEGY,
+                JavelinUiSettings.KEY_TIMEOUT_MINUTES
         );
         for (String uiKey : uiKeys) {
             String defaultKey = JavelinUiSettings.defaultKeyFor(uiKey);
@@ -152,7 +192,8 @@ class JavelinUiSettingsTest {
                 JavelinUiSettings.KEY_VISIBLE_BANDS,
                 JavelinUiSettings.KEY_JVM_HOME,
                 JavelinUiSettings.KEY_GRANULARITY,
-                JavelinUiSettings.KEY_RANKING_STRATEGY
+                JavelinUiSettings.KEY_RANKING_STRATEGY,
+                JavelinUiSettings.KEY_TIMEOUT_MINUTES
         );
         List<String> defaultKeys = uiKeys.stream()
                 .map(JavelinUiSettings::defaultKeyFor)
