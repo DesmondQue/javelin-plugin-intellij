@@ -65,6 +65,7 @@ The Javelin tool window (bottom of the IDE) has a split layout:
   - **Algorithm** - `ochiai` (default) or `ochiai-ms`
   - **Granularity** - `statement` (default, ranks individual lines) or `method` (aggregates to methods using max score)
   - **Ranking** - `dense` (default, recommended for debugging) or `average` (MID formula for SBFL evaluation and EXAM scores)
+  - **Timeout (min)** - Maximum time for the entire analysis (coverage, mutation testing, and scoring) in minutes. Set to 0 (default) for no time limit. Individual mutants that cause infinite loops are still killed by PITest's per-mutation timeout regardless of this setting. For large projects, consider setting a limit (e.g., 60--120 min) to prevent unexpectedly long runs.
   - **Threads** - Parallel test execution threads (defaults to CPU cores)
   - **JVM home** - Override the JVM used for test subprocesses (defaults to the project SDK)
   - **Offline mode** - Force offline bytecode instrumentation (for projects using mockito-inline, bytebuddy-agent, etc.)

@@ -157,6 +157,7 @@ public final class JavelinService {
             case 5 -> "Coverage execution failed. No .exec files were generated. Check for JaCoCo agent errors.";
             case 6 -> "Mutation analysis failed. Check the log for PITest errors.";
             case 7 -> "Failed to write output results.";
+            case 8 -> "Analysis timed out. Increase the timeout in Settings > Tools > Javelin, or set to 0 for no limit.";
             default -> "javelin-core failed with exit code " + code + ".";
         };
     }

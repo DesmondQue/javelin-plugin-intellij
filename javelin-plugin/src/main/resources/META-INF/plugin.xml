@@ -65,6 +65,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>0.3.1</h3>
+        <ul>
+          <li>Timeout now caps the entire analysis (coverage, mutation, scoring) with remaining-time budgeting per phase</li>
+          <li>Fixed PITest minion timeouts on large projects by adding per-mutation timeout tuning</li>
+          <li>Added dedicated timeout exit code for clear error messages instead of generic "mutation failed"</li>
+          <li>Added "Build first" checkbox to skip IntelliJ compilation when building manually</li>
+          <li>Updated javelin-cli submodule to v1.4.1-beta</li>
+        </ul>
         <h3>0.3.0</h3>
         <ul>
           <li>Cancel button now stops Ochiai/Ochiai-MS analysis and kills the process tree</li>

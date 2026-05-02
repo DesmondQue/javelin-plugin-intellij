@@ -62,13 +62,9 @@ public final class RunJavelinAction extends AnAction {
         String granularity = JavelinUiSettings.getGranularity(project);
         String rankingStrategy = JavelinUiSettings.getRankingStrategy(project);
 
-        CompilerManager.getInstance(project).make((aborted, errors, warnings, compileContext) -> {
-            if (aborted || errors > 0) {
-                notifyUser(project, "Build failed (" + errors + " error(s)). Fix compilation errors before running Javelin.", NotificationType.ERROR);
-                if (onComplete != null) onComplete.run();
-                return;
-            }
+        boolean buildFirst = JavelinUiSettings.isBuildFirst(project);
 
+        Runnable startAnalysis = () -> {
             Path targetPath = manualTarget != null ? manualTarget : PathDetector.detectTargetPath(project);
             Path testPath = manualTest != null ? manualTest : PathDetector.detectTestPath(project);
             Path sourcePath = "ochiai-ms".equals(algorithm)
@@ -141,7 +137,20 @@ public final class RunJavelinAction extends AnAction {
             };
 
             task.queue();
-        });
+        };
+
+        if (buildFirst) {
+            CompilerManager.getInstance(project).make((aborted, errors, warnings, compileContext) -> {
+                if (aborted || errors > 0) {
+                    notifyUser(project, "Build failed (" + errors + " error(s)). Fix compilation errors before running Javelin.", NotificationType.ERROR);
+                    if (onComplete != null) onComplete.run();
+                    return;
+                }
+                startAnalysis.run();
+            });
+        } else {
+            startAnalysis.run();
+        }
     }
 
     @Override

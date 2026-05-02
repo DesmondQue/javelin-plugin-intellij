@@ -146,6 +146,12 @@ public final class CoreProcessRunner {
             command.add(rankingStrategy);
         }
 
+        if (timeoutMs > 0) {
+            long minutes = timeoutMs / 60_000L;
+            command.add("--timeout");
+            command.add(Long.toString(minutes));
+        }
+
         GeneralCommandLine cmd = new GeneralCommandLine(command);
         cmd.withCharset(java.nio.charset.StandardCharsets.UTF_8);
         cmd.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
