@@ -222,6 +222,8 @@ public final class JavelinService {
         cachedJavaMajor = JavaVersionParser.parseJavaMajor(versionOutput);
     }
 
+    private static final int MIN_JVM_MAJOR = 11;
+
     private Path resolveJvmHome() {
         String settingsOverride = JavelinUiSettings.getJvmHome(project);
         if (!settingsOverride.isBlank()) {
@@ -230,14 +232,27 @@ public final class JavelinService {
 
         Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
         if (projectSdk != null && projectSdk.getHomePath() != null) {
-            return Path.of(projectSdk.getHomePath());
+            String versionString = projectSdk.getVersionString();
+            int sdkMajor = JavaVersionParser.parseJavaMajor(versionString);
+            if (sdkMajor >= MIN_JVM_MAJOR) {
+                return Path.of(projectSdk.getHomePath());
+            }
+            NotificationGroupManager.getInstance()
+                    .getNotificationGroup("Javelin Notifications")
+                    .createNotification(
+                            "Javelin: Project SDK is Java " + (sdkMajor > 0 ? sdkMajor : "unknown"),
+                            "Javelin requires Java 11+ to run tests. Using the IDE's bundled JBR instead. "
+                            + "Your Java " + (sdkMajor > 0 ? sdkMajor : "") + " bytecode is still supported.",
+                            NotificationType.INFORMATION)
+                    .notify(project);
+            return null;
         }
 
         NotificationGroupManager.getInstance()
                 .getNotificationGroup("Javelin Notifications")
                 .createNotification(
                         "Javelin: No Project SDK configured",
-                        "Test execution will use JBR 21. For Defects4J, set the Project SDK to Java 11.",
+                        "Test execution will use the IDE's bundled JBR.",
                         NotificationType.WARNING)
                 .notify(project);
         return null;

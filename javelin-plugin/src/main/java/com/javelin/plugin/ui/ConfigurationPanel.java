@@ -81,7 +81,7 @@ public final class ConfigurationPanel extends JPanel {
         FileChooserDescriptor jvmHomeDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
         jvmHomeDescriptor.setTitle("JVM Home Directory");
         jvmHomeField.addBrowseFolderListener(null, jvmHomeDescriptor);
-        jvmHomeField.getTextField().setToolTipText("Override the JVM used to run tests (defaults to project SDK)");
+        jvmHomeField.getTextField().setToolTipText("Override the JVM used to run tests (defaults to project SDK if Java 11+, otherwise JBR)");
         jvmHomeField.setText(JavelinUiSettings.getJvmHome(project));
         jvmHomeField.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }

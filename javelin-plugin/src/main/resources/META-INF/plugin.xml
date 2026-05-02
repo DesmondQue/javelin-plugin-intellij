@@ -65,6 +65,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>0.3.2</h3>
+        <ul>
+          <li>Fixed UnsupportedClassVersionError when project SDK is below Java 11 (e.g. Java 8 Defects4J projects)</li>
+          <li>Plugin now auto-detects project SDK version and falls back to JBR when SDK is too old for javelin-core</li>
+        </ul>
         <h3>0.3.1</h3>
         <ul>
           <li>Timeout now caps the entire analysis (coverage, mutation, scoring) with remaining-time budgeting per phase</li>
