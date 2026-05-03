@@ -40,6 +40,7 @@
           <li><b>Granularity:</b> Statement-level (default, ranks individual lines) or method-level (aggregates to methods using max score)</li>
           <li><b>Ranking:</b> Dense (default, recommended for debugging) or average/MID (for SBFL evaluation and EXAM scores)</li>
           <li><b>Offline mode:</b> Pre-instruments bytecode to avoid Java agent conflicts with Mockito-inline, ByteBuddy, PowerMock, JMockit, or AspectJ</li>
+          <li><b>Class name notation:</b> Inner and nested classes use JVM naming with <code>$</code> (e.g., <code>SearchQuery$Builder</code>). Method-level results use <code>#</code> to separate class and method (e.g., <code>Calculator#compute</code>).</li>
         </ul>
 
         <h3>Getting Started</h3>
@@ -65,6 +66,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>0.3.3</h3>
+        <ul>
+          <li>Real-time PITest progress streaming in the progress dialog during Ochiai-MS analysis</li>
+          <li>Documented class name notation ($ for inner classes, # for methods) in Output Options</li>
+          <li>Renamed "javelin-core" to "javelin-cli" in the status bar readiness popup</li>
+          <li>Updated javelin-cli submodule to v1.5.0-beta</li>
+        </ul>
         <h3>0.3.2</h3>
         <ul>
           <li>Fixed UnsupportedClassVersionError when project SDK is below Java 11 (e.g. Java 8 Defects4J projects)</li>

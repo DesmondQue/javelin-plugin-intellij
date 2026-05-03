@@ -7,10 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -24,6 +23,8 @@ import com.intellij.openapi.projectRoots.JavaSdkVersion;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.CompilerModuleExtension;
 import com.intellij.openapi.roots.ProjectRootManager;
+import com.intellij.openapi.ui.popup.JBPopup;
+import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.CustomStatusBarWidget;
 import com.intellij.openapi.wm.StatusBar;
@@ -67,6 +68,7 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
         private final Project project;
         private final JLabel label;
         private StatusBar statusBar;
+        private JBPopup activePopup;
 
         private Widget(Project project) {
             this.project = project;
@@ -76,10 +78,7 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
             this.label.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    ToolWindow tw = ToolWindowManager.getInstance(project).getToolWindow("Javelin");
-                    if (tw != null) {
-                        tw.show();
-                    }
+                    showStatusPopup();
                 }
             });
 
@@ -110,6 +109,9 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
 
         @Override
         public void dispose() {
+            if (activePopup != null && !activePopup.isDisposed()) {
+                activePopup.cancel();
+            }
         }
 
         @Override
@@ -120,60 +122,79 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
         public void refresh() {
             JavelinService service = project.getService(JavelinService.class);
             boolean running = service != null && service.isRunning();
-            List<Requirement> reqs = computeRequirements();
-            boolean ready = reqs.stream().allMatch(r -> r.ok);
+            List<JavelinStatusPopupPanel.Requirement> reqs = computeRequirements();
+            boolean ready = reqs.stream().allMatch(r -> r.ok());
 
-            // Label
             if (running) {
                 label.setText("Javelin \u21BB");
             } else if (ready) {
                 label.setText("Javelin \u2713");
             } else {
-                long failCount = reqs.stream().filter(r -> !r.ok).count();
+                long failCount = reqs.stream().filter(r -> !r.ok()).count();
                 label.setText(failCount == reqs.size() ? "Javelin \u2013" : "Javelin !");
             }
 
-            // Tooltip
-            StringBuilder sb = new StringBuilder("<html><body style='width:320px'><b>Javelin Status</b><br><hr><br>");
-            if (running) {
-                sb.append("<br><b>\u21BB Analysis running\u2026</b><br>");
-            }
-            for (Requirement req : reqs) {
-                sb.append(req.ok
-                        ? "<span style='color:#388E3C'>\u2713</span> "
-                        : "<span style='color:#D32F2F'>\u2717</span> ");
-                sb.append(req.name).append(": ").append(req.details).append("<br>");
-            }
-            // Last run summary
-            if (service != null && service.getLastRunDurationNanos() > 0) {
-                double seconds = service.getLastRunDurationNanos() / 1_000_000_000.0;
-                int resultCount = service.getLastResults() == null ? 0 : service.getLastResults().size();
-                sb.append("<br><b>Last run:</b> ")
-                        .append(String.format(Locale.ROOT, "%.2fs", seconds))
-                        .append(" | ").append(resultCount).append(" suspicious lines<br>");
-            }
-            sb.append("</body></html>");
-            label.setToolTipText(sb.toString());
+            label.setToolTipText("Click for Javelin status details");
 
             if (statusBar != null) {
                 statusBar.updateWidget(ID());
             }
         }
 
-        private List<Requirement> computeRequirements() {
-            List<Requirement> requirements = new ArrayList<>();
+        private void showStatusPopup() {
+            if (activePopup != null && !activePopup.isDisposed()) {
+                activePopup.cancel();
+                return;
+            }
+
+            JavelinService service = project.getService(JavelinService.class);
+            boolean running = service != null && service.isRunning();
+            List<JavelinStatusPopupPanel.Requirement> reqs = computeRequirements();
+
+            double lastRunSeconds = 0;
+            int suspiciousCount = 0;
+            if (service != null && service.getLastRunDurationNanos() > 0) {
+                lastRunSeconds = service.getLastRunDurationNanos() / 1_000_000_000.0;
+                suspiciousCount = service.getLastResults() == null ? 0 : service.getLastResults().size();
+            }
+
+            Runnable openToolWindow = () -> {
+                if (activePopup != null && !activePopup.isDisposed()) {
+                    activePopup.cancel();
+                }
+                ToolWindow tw = ToolWindowManager.getInstance(project).getToolWindow("Javelin");
+                if (tw != null) {
+                    tw.show();
+                }
+            };
+
+            JPanel panel = JavelinStatusPopupPanel.create(reqs, running, lastRunSeconds, suspiciousCount, openToolWindow);
+
+            activePopup = JBPopupFactory.getInstance()
+                    .createComponentPopupBuilder(panel, null)
+                    .setRequestFocus(true)
+                    .setFocusable(true)
+                    .setResizable(false)
+                    .setMovable(false)
+                    .createPopup();
+
+            activePopup.showUnderneathOf(label);
+        }
+
+        private List<JavelinStatusPopupPanel.Requirement> computeRequirements() {
+            List<JavelinStatusPopupPanel.Requirement> requirements = new ArrayList<>();
             JavelinService service = project.getService(JavelinService.class);
 
             boolean hasJavaModule = hasJavaModule(project);
-            requirements.add(new Requirement("Java Module", hasJavaModule,
+            requirements.add(new JavelinStatusPopupPanel.Requirement("Java Module", hasJavaModule,
                     hasJavaModule ? "Detected" : "No Java module found"));
 
             boolean mainClasses = hasCompiledMainClasses(project);
-            requirements.add(new Requirement("Main Classes", mainClasses,
+            requirements.add(new JavelinStatusPopupPanel.Requirement("Main Classes", mainClasses,
                     mainClasses ? "Compiled" : "Build project first"));
 
             boolean testClasses = hasCompiledTestClasses(project);
-            requirements.add(new Requirement("Test Classes", testClasses,
+            requirements.add(new JavelinStatusPopupPanel.Requirement("Test Classes", testClasses,
                     testClasses ? "Compiled" : "Build tests first"));
 
             Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
@@ -191,10 +212,10 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
                     javaDetails = javaOk ? "Java " + feature : "Java " + feature + " (need 8+)";
                 }
             }
-            requirements.add(new Requirement("JDK", javaOk, javaDetails));
+            requirements.add(new JavelinStatusPopupPanel.Requirement("JDK", javaOk, javaDetails));
 
             boolean coreJar = service != null && service.isCoreJarAvailable();
-            requirements.add(new Requirement("javelin-core", coreJar,
+            requirements.add(new JavelinStatusPopupPanel.Requirement("javelin-cli", coreJar,
                     coreJar ? "Available" : "JAR not found"));
 
             return requirements;
@@ -249,6 +270,4 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
         }
     }
 
-    private record Requirement(String name, boolean ok, String details) {
-    }
 }
