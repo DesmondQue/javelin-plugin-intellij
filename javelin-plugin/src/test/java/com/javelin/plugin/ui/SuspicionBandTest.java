@@ -33,19 +33,29 @@ class SuspicionBandTest {
     }
 
     @Test
-    void bottomHalfIsGreen() {
-        assertEquals(SuspicionBand.GREEN, SuspicionBand.fromRank(51, 100));
-        assertEquals(SuspicionBand.GREEN, SuspicionBand.fromRank(100, 100));
+    void bottomHalfIsYellow() {
+        assertEquals(SuspicionBand.YELLOW, SuspicionBand.fromRank(51, 100));
+        assertEquals(SuspicionBand.YELLOW, SuspicionBand.fromRank(100, 100));
     }
 
     @Test
-    void maxRankZeroReturnsGreen() {
-        assertEquals(SuspicionBand.GREEN, SuspicionBand.fromRank(1, 0));
+    void maxRankZeroReturnsYellow() {
+        assertEquals(SuspicionBand.YELLOW, SuspicionBand.fromRank(1, 0));
     }
 
     @Test
-    void maxRankNegativeReturnsGreen() {
-        assertEquals(SuspicionBand.GREEN, SuspicionBand.fromRank(1, -5));
+    void maxRankNegativeReturnsYellow() {
+        assertEquals(SuspicionBand.YELLOW, SuspicionBand.fromRank(1, -5));
+    }
+
+    @Test
+    void fromRankNeverReturnsGreen() {
+        for (int maxRank = 1; maxRank <= 200; maxRank++) {
+            for (int rank = 1; rank <= maxRank; rank++) {
+                assertNotEquals(SuspicionBand.GREEN, SuspicionBand.fromRank(rank, maxRank),
+                        "fromRank returned GREEN for rank=" + rank + ", maxRank=" + maxRank);
+            }
+        }
     }
 
     @Test

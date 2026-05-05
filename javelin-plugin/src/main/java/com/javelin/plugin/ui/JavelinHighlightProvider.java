@@ -306,19 +306,18 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
                 .max()
                 .orElse(0);
 
-        if (maxRank <= 0) {
-            return Map.of();
-        }
-
         Map<String, Map<Integer, SuspicionEntry>> byClass = new LinkedHashMap<>();
 
         for (LocalizationResult result : results) {
+            SuspicionBand band;
+            double percentile;
             if (result.score() <= 0.0) {
-                continue;
+                band = SuspicionBand.GREEN;
+                percentile = 0.0;
+            } else {
+                band = SuspicionBand.fromRank(result.rank(), maxRank);
+                percentile = (result.rank() / Math.max(1.0, maxRank)) * 100.0;
             }
-
-            SuspicionBand band = SuspicionBand.fromRank(result.rank(), maxRank);
-            double percentile = (result.rank() / maxRank) * 100.0;
             SuspicionEntry entry = new SuspicionEntry(result.rank(), result.score(), percentile, band);
 
             String fqcn = stripInnerClass(result.fullyQualifiedClass());
@@ -348,7 +347,6 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
         if (results == null || results.isEmpty()) return Set.of();
         Set<String> keys = new HashSet<>();
         for (LocalizationResult result : results) {
-            if (result.score() <= 0.0) continue;
             String fqcn = stripInnerClass(result.fullyQualifiedClass());
             switch (result) {
                 case StatementResult sr -> keys.add(fqcn + ":" + sr.lineNumber());
@@ -417,20 +415,19 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
         public String description() {
             return switch (this) {
-                case RED -> "Top 10% of ranked lines";
-                case ORANGE -> "Top 25% of ranked lines";
-                case YELLOW -> "Top 50% of ranked lines";
-                case GREEN -> "Lower-ranked suspicious lines";
+                case RED -> "Top 10% most suspicious";
+                case ORANGE -> "Top 25% most suspicious";
+                case YELLOW -> "Remaining suspicious lines (score > 0)";
+                case GREEN -> "Covered by tests, not implicated (score = 0)";
             };
         }
 
         public static SuspicionBand fromRank(double rank, double maxRank) {
             if (maxRank <= 0) {
-                return GREEN;
+                return YELLOW;
             }
             double redCutoff = Math.max(1.0, Math.ceil(maxRank * 0.10));
             double orangeCutoff = Math.max(redCutoff + 1, Math.ceil(maxRank * 0.25));
-            double yellowCutoff = Math.max(orangeCutoff + 1, Math.ceil(maxRank * 0.50));
 
             if (rank <= redCutoff) {
                 return RED;
@@ -438,15 +435,15 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             if (rank <= orangeCutoff) {
                 return ORANGE;
             }
-            if (rank <= yellowCutoff) {
-                return YELLOW;
-            }
-            return GREEN;
+            return YELLOW;
         }
     }
 
     public record SuspicionEntry(double rank, double score, double percentile, SuspicionBand band) {
         public String tooltip() {
+            if (band == SuspicionBand.GREEN) {
+                return "Javelin: covered by tests, not implicated (score 0.000000)";
+            }
             return String.format(Locale.ROOT,
                     "Javelin suspicion: rank %.1f, score %.6f, percentile %.1f%%",
                     rank,

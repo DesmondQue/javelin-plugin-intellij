@@ -661,18 +661,35 @@ public final class ResultsPanel extends JPanel {
     }
 
     private JavelinHighlightProvider.SuspicionBand resolveBand(LocalizationResult result) {
-        double maxRank = currentResults.stream().mapToDouble(LocalizationResult::rank).max().orElse(1.0);
+        if (result.score() <= 0.0) {
+            return JavelinHighlightProvider.SuspicionBand.GREEN;
+        }
+        double maxRank = positiveScoreMaxRank();
         return JavelinHighlightProvider.SuspicionBand.fromRank(result.rank(), maxRank);
     }
 
-    private JavelinHighlightProvider.SuspicionBand resolveBandForRank(double rank) {
-        double maxRank = currentResults.stream().mapToDouble(LocalizationResult::rank).max().orElse(1.0);
+    private JavelinHighlightProvider.SuspicionBand resolveBandForRank(double rank, double score) {
+        if (score <= 0.0) {
+            return JavelinHighlightProvider.SuspicionBand.GREEN;
+        }
+        double maxRank = positiveScoreMaxRank();
         return JavelinHighlightProvider.SuspicionBand.fromRank(rank, maxRank);
     }
 
     private double resolvePercentile(LocalizationResult result) {
-        double maxRank = currentResults.stream().mapToDouble(LocalizationResult::rank).max().orElse(1.0);
+        if (result.score() <= 0.0) {
+            return 0.0;
+        }
+        double maxRank = positiveScoreMaxRank();
         return (result.rank() / Math.max(1.0, maxRank)) * 100.0;
+    }
+
+    private double positiveScoreMaxRank() {
+        return currentResults.stream()
+                .filter(r -> r.score() > 0.0)
+                .mapToDouble(LocalizationResult::rank)
+                .max()
+                .orElse(1.0);
     }
 
     private static String formatRank(double rank) {
@@ -751,7 +768,7 @@ public final class ResultsPanel extends JPanel {
             if (modelCol == 3) {
                 JavelinHighlightProvider.SuspicionBand band = null;
                 if (userObj instanceof RankGroup group) {
-                    band = resolveBandForRank(group.rank());
+                    band = resolveBandForRank(group.rank(), group.score());
                 } else if (userObj instanceof LocalizationResult result) {
                     band = resolveBand(result);
                 }
