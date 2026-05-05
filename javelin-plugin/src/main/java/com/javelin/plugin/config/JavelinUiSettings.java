@@ -19,7 +19,6 @@ public final class JavelinUiSettings {
     public static final String KEY_ALGORITHM = "javelin.ui.algorithm";
     public static final String KEY_MAX_THREADS = "javelin.ui.maxThreads";
     public static final String KEY_VISIBLE_BANDS = "javelin.ui.visibleBands";
-    public static final String KEY_JVM_HOME = "javelin.ui.jvmHome";
     public static final String KEY_GRANULARITY = "javelin.ui.granularity";
     public static final String KEY_RANKING_STRATEGY = "javelin.ui.rankingStrategy";
     public static final String KEY_TIMEOUT_MINUTES = "javelin.ui.timeoutMinutes";
@@ -29,7 +28,6 @@ public final class JavelinUiSettings {
     public static final String DEFAULT_GRANULARITY = "statement";
     public static final String DEFAULT_RANKING_STRATEGY = "dense";
     public static final String DEFAULT_VISIBLE_BANDS = "RED,ORANGE,YELLOW,GREEN";
-    public static final String DEFAULT_JVM_HOME = "";
     public static final int DEFAULT_TIMEOUT_MINUTES = 0;
     public static final boolean DEFAULT_GUTTER_ENABLED = true;
     public static final boolean DEFAULT_HIGHLIGHT_ENABLED = true;
@@ -88,15 +86,6 @@ public final class JavelinUiSettings {
 
     public static void setDefaultMaxThreads(Project project, int threads) {
         getProperties(project).setValue(defaultKeyFor(KEY_MAX_THREADS), clampThreads(threads), Runtime.getRuntime().availableProcessors());
-    }
-
-    public static String getDefaultJvmHome(Project project) {
-        String value = getProperties(project).getValue(defaultKeyFor(KEY_JVM_HOME), DEFAULT_JVM_HOME);
-        return value == null ? DEFAULT_JVM_HOME : value;
-    }
-
-    public static void setDefaultJvmHome(Project project, String jvmHome) {
-        getProperties(project).setValue(defaultKeyFor(KEY_JVM_HOME), jvmHome == null ? DEFAULT_JVM_HOME : jvmHome, DEFAULT_JVM_HOME);
     }
 
     public static int getDefaultTimeoutMinutes(Project project) {
@@ -176,7 +165,6 @@ public final class JavelinUiSettings {
         setDefaultGranularity(project, getGranularity(project));
         setDefaultRankingStrategy(project, getRankingStrategy(project));
         setDefaultMaxThreads(project, getMaxThreads(project));
-        setDefaultJvmHome(project, getJvmHome(project));
         setDefaultTimeoutMinutes(project, getTimeoutMinutes(project));
         setDefaultBuildFirst(project, isBuildFirst(project));
         setDefaultHighlightEnabled(project, isHighlightEnabled(project));
@@ -191,7 +179,6 @@ public final class JavelinUiSettings {
         setGranularity(project, getDefaultGranularity(project));
         setRankingStrategy(project, getDefaultRankingStrategy(project));
         setMaxThreads(project, getDefaultMaxThreads(project));
-        setJvmHome(project, getDefaultJvmHome(project));
         setTimeoutMinutes(project, getDefaultTimeoutMinutes(project));
         setBuildFirst(project, isDefaultBuildFirst(project));
         setHighlightEnabled(project, isDefaultHighlightEnabled(project));
@@ -285,15 +272,6 @@ public final class JavelinUiSettings {
         }
         String serialized = String.join(",", visibleBands.stream().map(Enum::name).toList());
         getProperties(project).setValue(KEY_VISIBLE_BANDS, serialized, DEFAULT_VISIBLE_BANDS);
-    }
-
-    public static String getJvmHome(Project project) {
-        String value = getProperties(project).getValue(KEY_JVM_HOME, DEFAULT_JVM_HOME);
-        return value == null ? DEFAULT_JVM_HOME : value;
-    }
-
-    public static void setJvmHome(Project project, String jvmHome) {
-        getProperties(project).setValue(KEY_JVM_HOME, jvmHome == null ? DEFAULT_JVM_HOME : jvmHome, DEFAULT_JVM_HOME);
     }
 
     public static String getGranularity(Project project) {

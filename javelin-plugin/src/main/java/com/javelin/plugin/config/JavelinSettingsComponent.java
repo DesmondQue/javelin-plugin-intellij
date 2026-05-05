@@ -17,10 +17,7 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 
-import com.intellij.openapi.fileChooser.FileChooserDescriptor;
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.ui.ComboBox;
-import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.ui.TitledSeparator;
 import com.intellij.ui.components.JBLabel;
 import com.javelin.plugin.ui.JavelinHighlightProvider.SuspicionBand;
@@ -34,7 +31,6 @@ public final class JavelinSettingsComponent {
     private final int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
     private final JSpinner timeoutSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 120, 1));
-    private final TextFieldWithBrowseButton jvmHomeField = new TextFieldWithBrowseButton();
     private final JCheckBox buildFirstCheckbox = new JCheckBox("Build project before analysis");
     private final JCheckBox highlightCheckbox = new JCheckBox("Line background highlighting");
     private final JCheckBox gutterCheckbox = new JCheckBox("Gutter icons");
@@ -69,12 +65,6 @@ public final class JavelinSettingsComponent {
 
         addLabeledRow(formPanel, "Timeout (minutes):", timeoutSpinner, row++);
         timeoutSpinner.setToolTipText("Maximum time for analysis in minutes (0 = no limit)");
-
-        addLabeledRow(formPanel, "JVM home override:", jvmHomeField, row++);
-        FileChooserDescriptor jvmHomeDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
-        jvmHomeDescriptor.setTitle("JVM Home Directory");
-        jvmHomeField.addBrowseFolderListener(null, jvmHomeDescriptor);
-        jvmHomeField.getTextField().setToolTipText("Override the JVM used to run tests (defaults to project SDK)");
 
         addCheckboxRow(formPanel, buildFirstCheckbox, row++);
         buildFirstCheckbox.setToolTipText("Compile the project before running analysis (disable if you build manually)");
@@ -158,10 +148,6 @@ public final class JavelinSettingsComponent {
         return (int) timeoutSpinner.getValue();
     }
 
-    public String getJvmHome() {
-        return jvmHomeField.getText().trim();
-    }
-
     public boolean isBuildFirst() {
         return buildFirstCheckbox.isSelected();
     }
@@ -214,10 +200,6 @@ public final class JavelinSettingsComponent {
         timeoutSpinner.setValue(Math.max(0, Math.min(minutes, 120)));
     }
 
-    public void setJvmHome(String path) {
-        jvmHomeField.setText(path == null ? "" : path);
-    }
-
     public void setBuildFirst(boolean enabled) {
         buildFirstCheckbox.setSelected(enabled);
     }
@@ -248,7 +230,6 @@ public final class JavelinSettingsComponent {
         setRankingStrategy(JavelinUiSettings.DEFAULT_RANKING_STRATEGY);
         setThreads(maxThreads);
         setTimeoutMinutes(JavelinUiSettings.DEFAULT_TIMEOUT_MINUTES);
-        setJvmHome(JavelinUiSettings.DEFAULT_JVM_HOME);
         setBuildFirst(JavelinUiSettings.DEFAULT_BUILD_FIRST);
         setHighlightEnabled(JavelinUiSettings.DEFAULT_HIGHLIGHT_ENABLED);
         setGutterEnabled(JavelinUiSettings.DEFAULT_GUTTER_ENABLED);

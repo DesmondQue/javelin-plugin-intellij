@@ -41,18 +41,12 @@ public final class RunJavelinAction extends AnAction {
     }
 
     public static void runAnalysis(Project project, String algorithm, int threads) {
-        runAnalysis(project, algorithm, threads, null, null, null, null, false, null);
+        runAnalysis(project, algorithm, threads, null, null, null, false, null);
     }
 
     public static void runAnalysis(Project project, String algorithm, int threads,
                                     Path manualTarget, Path manualTest, Path manualSource,
-                                    String manualClasspath, boolean offline) {
-        runAnalysis(project, algorithm, threads, manualTarget, manualTest, manualSource, manualClasspath, offline, null);
-    }
-
-    public static void runAnalysis(Project project, String algorithm, int threads,
-                                    Path manualTarget, Path manualTest, Path manualSource,
-                                    String manualClasspath, boolean offline,
+                                    boolean offline,
                                     Runnable onComplete) {
         if (project == null || project.getBasePath() == null) {
             if (onComplete != null) onComplete.run();
@@ -89,7 +83,7 @@ public final class RunJavelinAction extends AnAction {
                 public void run(@NotNull ProgressIndicator indicator) {
                     indicator.setText("Javelin: Running " + algorithm + " analysis...");
                     try {
-                        String classpath = manualClasspath != null ? manualClasspath : PathDetector.resolveModuleClasspath(project);
+                        String classpath = PathDetector.resolveModuleClasspath(project);
                         List<LocalizationResult> results = service.runAnalysis(new JavelinService.RunRequest(
                                 targetPath,
                                 testPath,

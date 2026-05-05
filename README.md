@@ -90,13 +90,11 @@ Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven p
 | **Target classes** | Compiled application classes directory |
 | **Test classes** | Compiled test classes directory |
 | **Source directory** | Java source root (only required for Ochiai-MS) |
-| **Extra classpath** | Additional runtime dependencies your tests need |
 | **Algorithm** | Choose between Ochiai (fast, default) and Ochiai-MS (slower, experimental). See [Choosing an Algorithm](#choosing-an-algorithm). |
 | **Granularity** | `statement` ranks individual lines (default), `method` groups results by method |
 | **Ranking** | `dense` for debugging (default), `average` for research evaluation. See [CLI docs](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md#ranking-strategies) for details. |
 | **Timeout** | Maximum analysis time in minutes (0 = no limit) |
 | **Threads** | Parallel test execution threads (defaults to CPU cores) |
-| **JVM home** | Override the JVM used to run tests (defaults to the project SDK) |
 | **Offline mode** | Use pre-instrumented bytecode instead of a Java agent (needed for projects using mockito-inline, bytebuddy-agent, etc.) |
 
 </div>
@@ -319,7 +317,7 @@ For the mathematical formulas and implementation details behind both algorithms,
 
 **Overlapping coverage highlights.** If IntelliJ's built-in coverage runner (or a third-party coverage plugin) is active at the same time, both tools highlight lines in the editor and their colors blend. Disable one tool's highlighting before running the other, or toggle Javelin's indicators from the toolbar.
 
-**JVM differences with older projects.** The plugin runs tests on the project SDK (Java 11+) or IntelliJ's bundled runtime (Java 21) as a fallback. Projects targeting Java 7 and below may encounter runtime differences. Use the **JVM home** field to specify a matching JDK. See the [JVM Compatibility](https://github.com/DesmondQue/javelin-cli#jvm-compatibility) docs for details.
+**JVM differences with older projects.** The plugin runs tests on the project SDK (Java 11+) or IntelliJ's bundled runtime (Java 21) as a fallback. Projects targeting Java 7 and below may encounter runtime differences. See the [Java Compatibility Guide](javelin-plugin/docs/JAVA_COMPATIBILITY.md) for details.
 
 ---
 

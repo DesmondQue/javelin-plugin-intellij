@@ -23,7 +23,6 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.javelin.plugin.bridge.CoreProcessResult;
 import com.javelin.plugin.bridge.CoreProcessRunner;
 import com.javelin.plugin.bridge.CsvResultParser;
-import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.model.LocalizationResult;
 import com.javelin.plugin.model.RunStats;
 import com.javelin.plugin.ui.JavelinResultsListener;
@@ -225,11 +224,6 @@ public final class JavelinService {
     private static final int MIN_JVM_MAJOR = 11;
 
     private Path resolveJvmHome() {
-        String settingsOverride = JavelinUiSettings.getJvmHome(project);
-        if (!settingsOverride.isBlank()) {
-            return Path.of(settingsOverride);
-        }
-
         Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
         if (projectSdk != null && projectSdk.getHomePath() != null) {
             String versionString = projectSdk.getVersionString();

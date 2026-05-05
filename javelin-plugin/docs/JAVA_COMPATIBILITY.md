@@ -34,9 +34,8 @@ Javelin has been tested against real-world open-source projects from the [Defect
 
 The plugin runs inside IntelliJ IDEA and spawns `javelin-cli` as an external process. It selects the JVM for test execution in this order:
 
-1. **JVM home override** (if set in the configuration panel)
-2. **Project SDK** (from IntelliJ's project settings, Java 11+)
-3. **IntelliJ's bundled JBR** (Java 21, used as fallback)
+1. **Project SDK** (from IntelliJ's project settings, Java 11+)
+2. **IntelliJ's bundled JBR** (Java 21, used as fallback when the project SDK is below Java 11)
 
 You do not need Java 21 installed separately. The plugin uses IntelliJ's bundled runtime to launch the engine.
 
@@ -62,7 +61,7 @@ WARNING: Target classes compiled for Java 8 (bytecode 52) but running on Java 21
 Consider --jvm-home for correct test behavior.
 ```
 
-This warning is informational. Most projects work fine despite the mismatch. Use the **JVM home** field to point at a matching JDK if your tests depend on version-specific runtime behavior.
+This warning is informational. Most projects work fine despite the mismatch.
 
 ## Known Issues with Older Projects
 
@@ -76,7 +75,7 @@ Projects targeting Java 7 and below may encounter these issues when tests execut
 
 **Framework compatibility.** Older versions of testing frameworks (JUnit 3, early Mockito, PowerMock) may not function correctly on newer JVMs.
 
-To avoid these issues, set the **JVM home** field to a JDK matching your project's target version.
+To avoid these issues, configure your IntelliJ project SDK to match the target Java version.
 
 ## Further Reading
 

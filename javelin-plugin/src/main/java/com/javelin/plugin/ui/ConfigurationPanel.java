@@ -40,8 +40,6 @@ public final class ConfigurationPanel extends JPanel {
     private final TextFieldWithBrowseButton targetField = new TextFieldWithBrowseButton();
     private final TextFieldWithBrowseButton testField = new TextFieldWithBrowseButton();
     private final TextFieldWithBrowseButton sourceField = new TextFieldWithBrowseButton();
-    private final TextFieldWithBrowseButton classpathField = new TextFieldWithBrowseButton();
-    private final TextFieldWithBrowseButton jvmHomeField = new TextFieldWithBrowseButton();
     private final ComboBox<String> algorithmCombo = new ComboBox<>(new String[]{"ochiai", "ochiai-ms"});
     private final ComboBox<String> granularityCombo = new ComboBox<>(new String[]{"statement", "method"});
     private final ComboBox<String> rankingCombo = new ComboBox<>(new String[]{"dense", "average"});
@@ -74,22 +72,6 @@ public final class ConfigurationPanel extends JPanel {
         sourceField.addBrowseFolderListener(null, sourceDescriptor);
         sourceField.getTextField().setToolTipText("Java source directory (required for ochiai-ms)");
 
-        FileChooserDescriptor classpathDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
-        classpathDescriptor.setTitle("Extra Classpath");
-        classpathField.addBrowseFolderListener(null, classpathDescriptor);
-        classpathField.getTextField().setToolTipText("Overrides auto-detected dependencies for test execution (leave empty to auto-resolve)");
-
-        FileChooserDescriptor jvmHomeDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor();
-        jvmHomeDescriptor.setTitle("JVM Home Directory");
-        jvmHomeField.addBrowseFolderListener(null, jvmHomeDescriptor);
-        jvmHomeField.getTextField().setToolTipText("Override the JVM used to run tests (defaults to project SDK if Java 11+, otherwise JBR)");
-        jvmHomeField.setText(JavelinUiSettings.getJvmHome(project));
-        jvmHomeField.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }
-            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }
-            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { saveJvmHome(); }
-            private void saveJvmHome() { JavelinUiSettings.setJvmHome(project, jvmHomeField.getText().trim()); }
-        });
 
         algorithmCombo.setSelectedItem(JavelinUiSettings.getAlgorithm(project));
         algorithmCombo.addActionListener(e -> {
@@ -159,8 +141,6 @@ public final class ConfigurationPanel extends JPanel {
         addRow(formPanel, sourceDirLabel, sourceField, row++);
         addRow(formPanel, "* Granularity:", granularityCombo, row++);
         addRow(formPanel, rankingLabel, rankingCombo, row++);
-        addRow(formPanel, "Extra classpath:", classpathField, row++);
-        addRow(formPanel, "Override JVM home:", jvmHomeField, row++);
         addRow(formPanel, "* Threads:", threadsSpinner, row++);
         addRow(formPanel, "Timeout (min):", timeoutSpinner, row++);
         addRow(formPanel, "", buildFirstCheckbox, row++);
@@ -199,8 +179,6 @@ public final class ConfigurationPanel extends JPanel {
         targetField.setText(target.toString());
         testField.setText(test.toString());
         sourceField.setText(source.toString());
-        classpathField.setText("");
-
         List<String> detected = new ArrayList<>();
         List<String> missing = new ArrayList<>();
         if (Files.isDirectory(target)) {
@@ -253,11 +231,6 @@ public final class ConfigurationPanel extends JPanel {
         return text.isEmpty() ? null : Path.of(text);
     }
 
-    public String getExtraClasspath() {
-        String text = classpathField.getText().trim();
-        return text.isEmpty() ? null : text;
-    }
-
     public String getAlgorithm() {
         Object selected = algorithmCombo.getSelectedItem();
         return selected == null ? "ochiai" : selected.toString();
@@ -269,11 +242,6 @@ public final class ConfigurationPanel extends JPanel {
 
     public boolean isOffline() {
         return offlineCheckbox.isSelected();
-    }
-
-    public String getJvmHome() {
-        String text = jvmHomeField.getText().trim();
-        return text.isEmpty() ? null : text;
     }
 
     public void setRunning(boolean running) {
@@ -289,8 +257,6 @@ public final class ConfigurationPanel extends JPanel {
         targetField.setEnabled(!running);
         testField.setEnabled(!running);
         sourceField.setEnabled(!running);
-        classpathField.setEnabled(!running);
-        jvmHomeField.setEnabled(!running);
         if (running) {
             runButton.setText("Analysis Running...");
         } else {
@@ -309,11 +275,10 @@ public final class ConfigurationPanel extends JPanel {
         Path target = getTargetPath();
         Path test = getTestPath();
         Path source = getSourcePath();
-        String classpath = getExtraClasspath();
         boolean offline = isOffline();
 
         setRunning(true);
-        RunJavelinAction.runAnalysis(project, algorithm, threads, target, test, source, classpath, offline,
+        RunJavelinAction.runAnalysis(project, algorithm, threads, target, test, source, offline,
                 () -> setRunning(false));
     }
 
