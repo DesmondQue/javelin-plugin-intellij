@@ -317,6 +317,8 @@ For the mathematical formulas and implementation details behind both algorithms,
 
 **Overlapping coverage highlights.** If IntelliJ's built-in coverage runner (or a third-party coverage plugin) is active at the same time, both tools highlight lines in the editor and their colors blend. Disable one tool's highlighting before running the other, or toggle Javelin's indicators from the toolbar.
 
+**Classpath auto-resolution.** The plugin resolves test dependencies automatically from IntelliJ's module dependency graph. If your tests depend on a JAR or directory that is not declared in your build configuration (Gradle, Maven, or module settings), it will not be included. Make sure all test dependencies are properly declared in your project. For manual classpath control, use the [CLI](https://github.com/DesmondQue/javelin-cli) with the `--classpath` flag.
+
 **JVM differences with older projects.** The plugin runs tests on the project SDK (Java 11+) or IntelliJ's bundled runtime (Java 21) as a fallback. Projects targeting Java 7 and below may encounter runtime differences. See the [Java Compatibility Guide](javelin-plugin/docs/JAVA_COMPATIBILITY.md) for details.
 
 ---
