@@ -1,6 +1,6 @@
 # Javelin Plugin for IntelliJ IDEA
 
-**Find the bug, not just the failing test.**
+**Turn test failures into a ranked list of suspicious code.**
 
 Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list pointing you toward the most likely source of the bug.
 
