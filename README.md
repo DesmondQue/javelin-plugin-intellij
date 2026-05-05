@@ -33,7 +33,7 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 
 <br>
 
-> **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation. The plugin runs using IntelliJ's bundled runtime, and your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21).
+> **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation. The plugin runs using IntelliJ's bundled runtime, and your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21). See the [Java Compatibility Guide](javelin-plugin/docs/JAVA_COMPATIBILITY.md) for the full testing matrix and bytecode version details.
 
 ---
 
@@ -331,6 +331,7 @@ For the mathematical formulas and implementation details behind both algorithms,
 |---|---|
 | [Build Guide](javelin-plugin/docs/BUILDING.md) | Build from source, run in development mode, run tests |
 | [Architecture](javelin-plugin/docs/ARCHITECTURE.md) | System architecture, data flow, and design decisions |
+| [Java Compatibility](javelin-plugin/docs/JAVA_COMPATIBILITY.md) | Testing matrix, bytecode versions, and JVM selection |
 | [Algorithm Documentation](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md) | Ochiai and Ochiai-MS formulas, ranking strategies, method aggregation |
 | [CLI Troubleshooting](https://github.com/DesmondQue/javelin-cli/tree/main/javelin-core/docs) | Offline mode, output format, common issues |
 
