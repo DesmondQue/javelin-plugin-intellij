@@ -248,15 +248,6 @@ Hover over the widget to see its status:
 
 Click the widget to see a readiness checklist showing whether your project has everything Javelin needs -- Java module detected, classes compiled, JDK available, and engine bundled:
 
-<br>
-
-<p align="center">
-  <img src="javelin-plugin/docs/images/status-bar-click.png" alt="Status bar readiness checklist" />
-</p>
-<p align="center"><em>Readiness checklist with per-component status</em></p>
-
-<br>
-
 <div align="center">
 
 | Icon | Meaning |
@@ -267,6 +258,15 @@ Click the widget to see a readiness checklist showing whether your project has e
 | **Javelin spinner** | Analysis in progress |
 
 </div>
+
+<br>
+
+<p align="center">
+  <img src="javelin-plugin/docs/images/status-bar-click.png" alt="Status bar readiness checklist" />
+</p>
+<p align="center"><em> On click readiness checklist with per-component status</em></p>
+
+<br>
 
 <br>
 
@@ -325,8 +325,6 @@ For the mathematical formulas and implementation details behind both algorithms,
 
 ## Documentation
 
-<br>
-
 <div align="center">
 
 | Document | Description |
@@ -338,13 +336,9 @@ For the mathematical formulas and implementation details behind both algorithms,
 
 </div>
 
-<br>
-
 ---
 
 ## Related
-
-<br>
 
 <div align="center">
 
@@ -354,7 +348,6 @@ For the mathematical formulas and implementation details behind both algorithms,
 
 </div>
 
-<br>
 
 ---
 
