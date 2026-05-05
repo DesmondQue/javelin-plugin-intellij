@@ -66,6 +66,15 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>0.4.0</h3>
+        <ul>
+          <li>GREEN band now indicates lines covered by tests but not implicated by failing tests (score = 0), separate from percentile-based Red/Orange/Yellow bands</li>
+          <li>Fixed stderr buffering in CoreProcessRunner that caused stat parsing failures</li>
+          <li>Fixed algorithm dropdown highlight, status widget refresh, and settings persistence</li>
+          <li>Restructured README with screenshots, split out build guide and architecture docs</li>
+          <li>Added Java version compatibility guide</li>
+          <li>Updated javelin-cli submodule to v1.5.1-beta</li>
+        </ul>
         <h3>0.3.3</h3>
         <ul>
           <li>Real-time PITest progress streaming in the progress dialog during Ochiai-MS analysis</li>

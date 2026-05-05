@@ -39,7 +39,7 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 
 ## Installation
 
-Download the latest `javelin-plugin-0.1.2.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page.
+Download the latest `javelin-plugin-0.4.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page.
 
 In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
 
