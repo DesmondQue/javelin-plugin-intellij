@@ -2,7 +2,7 @@
 
 **Turn test failures into a ranked list of suspicious code.**
 
-Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list pointing you toward the most likely source of the bug.
+Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. "The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list grounded in test execution data, with every score fully traceable."
 
 This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin brings it into IntelliJ IDEA as a one-click workflow with in-editor highlighting.
 
