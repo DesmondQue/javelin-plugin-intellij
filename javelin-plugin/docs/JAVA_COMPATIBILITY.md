@@ -21,10 +21,10 @@ Javelin has been tested against real-world open-source projects from the [Defect
 
 | Java Version | Bytecode | Testing Level | Projects Tested | Notes |
 |---|---|---|:---|:---|
-| **Java 8** | 52 | Heavy | Commons-CSV, Commons-Math, JFreeChart, Closure Compiler, Mockito, Joda-Time | Primary testing target. Full coverage of both Ochiai and Ochiai-MS. |
-| **Java 11** | 55 | Heavy | Commons-CSV, Commons-Math, JFreeChart | Second primary target. Validated both algorithms and offline mode. |
-| **Java 17** | 61 | Light | Selected Defects4J projects | Spot-checked for compatibility. No issues found. |
-| **Java 21** | 65 | Light | Selected Defects4J projects | Spot-checked for compatibility. No issues found. |
+| **Java 8** | 52 | Heavy | Defects4J projects | Primary testing target. Full coverage of both Ochiai and Ochiai-MS. |
+| **Java 11** | 55 | Heavy | Defects4J projects | Second primary target. Validated both algorithms and offline mode. |
+| **Java 17** | 61 | Light | gitbug-java projects | Spot-checked for compatibility. No issues found. |
+| **Java 21** | 65 | Light | personal Java projects | Spot-checked for compatibility. No issues found. |
 
 > **Java 7 and below:** Not tested. Projects targeting Java 7 or older may encounter runtime differences when tests execute on a newer JVM (removed internal APIs, module access restrictions, changed defaults). See [Known Issues](#known-issues-with-older-projects) below.
 
