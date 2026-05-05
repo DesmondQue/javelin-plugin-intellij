@@ -11,7 +11,7 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 <p align="center">
   <img src="javelin-plugin/docs/images/hero.png" alt="Javelin overview" />
 </p>
-<p align="center"><em>The Javelin tool window with configuration, results, and in-editor highlighting</em></p>
+<p align="center"><em>Full IDE view: editor with suspicion band highlighting and gutter icons, configuration panel (bottom-left), ranked results (bottom-right), and completion notification</em></p>
 
 <br>
 
