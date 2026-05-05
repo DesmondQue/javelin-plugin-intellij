@@ -2,10 +2,10 @@
 
 ## Build from Source
 
-Javelin Plugin depends on the `javelin-core` fat JAR. Build both in sequence:
+Javelin Plugin depends on the `javelin-cli` fat JAR. Build both in sequence:
 
 ```bash
-# 1. Build javelin-core fat JAR (from the javelin-cli repo)
+# 1. Build javelin-cli fat JAR (from the javelin-cli repo)
 cd javelin-core
 ./gradlew fatJar --no-daemon
 

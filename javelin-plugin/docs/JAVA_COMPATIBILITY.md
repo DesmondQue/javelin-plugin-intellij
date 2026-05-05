@@ -32,7 +32,7 @@ Javelin has been tested against real-world open-source projects from the [Defect
 
 ### The Plugin (javelin-plugin)
 
-The plugin runs inside IntelliJ IDEA and spawns `javelin-core` as an external process. It selects the JVM for test execution in this order:
+The plugin runs inside IntelliJ IDEA and spawns `javelin-cli` as an external process. It selects the JVM for test execution in this order:
 
 1. **JVM home override** (if set in the configuration panel)
 2. **Project SDK** (from IntelliJ's project settings, Java 11+)
@@ -40,7 +40,7 @@ The plugin runs inside IntelliJ IDEA and spawns `javelin-core` as an external pr
 
 You do not need Java 21 installed separately. The plugin uses IntelliJ's bundled runtime to launch the engine.
 
-### The Engine (javelin-core)
+### The Engine (javelin-cli)
 
 The engine is compiled to Java 11 bytecode but requires Java 21+ to run (it uses Java 21 APIs internally). It analyzes your project's `.class` files using:
 
