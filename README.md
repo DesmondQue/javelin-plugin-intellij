@@ -6,17 +6,24 @@ Javelin analyzes which lines of code are executed by your failing tests versus y
 
 This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin brings it into IntelliJ IDEA as a one-click workflow with in-editor highlighting.
 
-![Javelin overview](javelin-plugin/docs/images/hero.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/hero.png" alt="Javelin overview" />
+</p>
+<p align="center"><em>The Javelin tool window with configuration, results, and in-editor highlighting</em></p>
 
 ---
 
 ## Requirements
+
+<div align="center">
 
 | Requirement | Details |
 |---|---|
 | **IntelliJ IDEA** | 2025.1 through 2025.3.x (Community or Ultimate) |
 | **Java project** | Must be compiled (`.class` files present) with JUnit tests |
 | **At least 1 failing test** | Javelin needs failing tests to identify suspicious code |
+
+</div>
 
 > **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation -- the plugin runs using IntelliJ's bundled runtime. Your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21).
 
@@ -48,11 +55,19 @@ In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from D
 
 The left side of the Javelin tool window is the configuration panel, where you set up what Javelin should analyze.
 
-![Configuration panel](javelin-plugin/docs/images/configuration-panel.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/configuration-panel.png" alt="Configuration panel" />
+</p>
+<p align="center"><em>Configuration panel with auto-detected paths and analysis settings</em></p>
 
 Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven project layouts. Fields marked with `*` are required. All detected paths can be overridden manually. Hover over any field label for a description of what it does.
 
-![Algorithm tooltip](javelin-plugin/docs/images/tooltip.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/tooltip.png" alt="Algorithm tooltip" />
+</p>
+<p align="center"><em>Hovering over the Algorithm field shows a description of each option</em></p>
+
+<div align="center">
 
 | Setting | Description |
 |---|---|
@@ -68,11 +83,15 @@ Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven p
 | **JVM home** | Override the JVM used to run tests (defaults to the project SDK) |
 | **Offline mode** | Use pre-instrumented bytecode instead of a Java agent (needed for projects using mockito-inline, bytebuddy-agent, etc.) |
 
+</div>
+
 ---
 
 ### Running an Analysis
 
 You can start an analysis from several places:
+
+<div align="center">
 
 | Method | How |
 |---|---|
@@ -81,7 +100,12 @@ You can start an analysis from several places:
 | **Menu** | `Tools > Run Javelin Analysis` |
 | **Run Configuration** | `Run > Edit Configurations > + > Javelin` |
 
-![Running analysis](javelin-plugin/docs/images/running-analysis.png)
+</div>
+
+<p align="center">
+  <img src="javelin-plugin/docs/images/running-analysis.png" alt="Running analysis" />
+</p>
+<p align="center"><em>Progress indicator while Javelin discovers and executes tests</em></p>
 
 A notification appears when analysis completes, showing the number of suspicious lines found, the top-ranked result, and how long it took.
 
@@ -91,7 +115,12 @@ A notification appears when analysis completes, showing the number of suspicious
 
 The right side of the Javelin tool window displays results in a table grouped by rank.
 
-![Results panel](javelin-plugin/docs/images/results-panel.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/results-panel.png" alt="Results panel" />
+</p>
+<p align="center"><em>Results grouped by rank with statistics bar and completion notification</em></p>
+
+<div align="center">
 
 | Column | Description |
 |---|---|
@@ -101,15 +130,23 @@ The right side of the Javelin tool window displays results in a table grouped by
 | **Band** | Severity level -- Critical, High, Medium, or Low |
 | **Top-N** | Position in the overall ranked list |
 
+</div>
+
 Click any column header to sort. Use the filter field to search by class or method name. Right-click for copy and export options. The statistics bar at the bottom shows test counts (passed/failed), coverage metrics, execution timing, and mutation data when using Ochiai-MS.
 
 Double-click a row (or press `Enter`) to navigate to that line in the editor. Hovering over a selected row shows its file path, line number, and score:
 
-![Selected row in results panel](javelin-plugin/docs/images/results-navigation-before-dclick-panel.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/results-navigation-before-dclick-panel.png" alt="Selected row in results panel" />
+</p>
+<p align="center"><em>Selecting a result row shows file, line, and score details</em></p>
 
 The editor opens to the exact line, highlighted by suspicion band:
 
-![Editor navigated to suspicious line](javelin-plugin/docs/images/results-navigation-after-dclick-editor.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/results-navigation-after-dclick-editor.png" alt="Editor navigated to suspicious line" />
+</p>
+<p align="center"><em>Double-clicking navigates to the suspicious line in the editor</em></p>
 
 ---
 
@@ -119,7 +156,12 @@ Javelin highlights suspicious lines directly in the editor using a 4-tier color 
 
 Lines are colored by suspicion band, with gutter icons on the left and stripe marks on the scrollbar to the right:
 
-![Editor with line highlights, gutter icons, and scrollbar stripe marks](javelin-plugin/docs/images/visual-indicators.png-highlight-gutter-scroll-indicators-editor.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/visual-indicators.png-highlight-gutter-scroll-indicators-editor.png" alt="Editor with line highlights, gutter icons, and scrollbar stripe marks" />
+</p>
+<p align="center"><em>Line highlighting, gutter icons, and scrollbar stripe marks in the editor</em></p>
+
+<div align="center">
 
 | Band | Color | Meaning |
 |---|---|---|
@@ -128,9 +170,14 @@ Lines are colored by suspicion band, with gutter icons on the left and stripe ma
 | **Medium** | Yellow | Remaining suspicious lines (score > 0) |
 | **Low** | Green | Covered by tests but not implicated (score = 0) |
 
+</div>
+
 Hover over any highlighted line, gutter icon, or scrollbar mark to see its rank, score, and percentile. Each indicator type (line highlighting, gutter icons, scrollbar marks) can be toggled independently from the toolbar. Use the band filter dropdown to show or hide specific severity levels:
 
-![Band filter dropdown](javelin-plugin/docs/images/visual-indicators.png-icons-on-panel.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/visual-indicators.png-icons-on-panel.png" alt="Band filter dropdown" />
+</p>
+<p align="center"><em>Toggle individual severity bands from the toolbar dropdown</em></p>
 
 **Works alongside other plugins.** Javelin's indicators use standard IntelliJ APIs and are designed to coexist with built-in features like breakpoints, error highlights, and search results. Gutter icons occupy a separate slot from run/debug markers. If a coverage plugin is active at the same time, its colors may blend with Javelin's -- toggle one off to keep results clear.
 
@@ -142,11 +189,19 @@ The widget in the bottom-right corner shows whether your project is ready for an
 
 Hover over the widget to see its status:
 
-![Status bar hover tooltip](javelin-plugin/docs/images/status-bar-hover.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/status-bar-hover.png" alt="Status bar hover tooltip" />
+</p>
+<p align="center"><em>Hovering shows a quick status message</em></p>
 
 Click the widget to see a readiness checklist showing whether your project has everything Javelin needs -- Java module detected, classes compiled, JDK available, and engine bundled:
 
-![Status bar readiness checklist](javelin-plugin/docs/images/status-bar-click.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/status-bar-click.png" alt="Status bar readiness checklist" />
+</p>
+<p align="center"><em>Readiness checklist with per-component status</em></p>
+
+<div align="center">
 
 | Icon | Meaning |
 |---|---|
@@ -155,13 +210,18 @@ Click the widget to see a readiness checklist showing whether your project has e
 | **Javelin dash** | Not ready |
 | **Javelin spinner** | Analysis in progress |
 
+</div>
+
 ---
 
 ### Settings and Clearing Results
 
 **Persistent settings.** Go to **Settings > Tools > Javelin** to configure defaults that persist across sessions, including algorithm, granularity, thread count, and which visual indicators are enabled.
 
-![Settings page](javelin-plugin/docs/images/settings-page.png)
+<p align="center">
+  <img src="javelin-plugin/docs/images/settings-page.png" alt="Settings page" />
+</p>
+<p align="center"><em>Settings > Tools > Javelin with analysis defaults and editor appearance options</em></p>
 
 **Clearing results.** Go to **Tools > Clear Javelin Results** to remove all highlights, gutter icons, scrollbar marks, and result data from the editor.
 
@@ -203,6 +263,8 @@ For the mathematical formulas and implementation details behind both algorithms,
 
 ## Documentation
 
+<div align="center">
+
 | Document | Description |
 |---|---|
 | [Build Guide](javelin-plugin/docs/BUILDING.md) | Build from source, run in development mode, run tests |
@@ -210,13 +272,19 @@ For the mathematical formulas and implementation details behind both algorithms,
 | [Algorithm Documentation](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md) | Ochiai and Ochiai-MS formulas, ranking strategies, method aggregation |
 | [CLI Troubleshooting](https://github.com/DesmondQue/javelin-cli/tree/main/javelin-core/docs) | Offline mode, output format, common issues |
 
+</div>
+
 ---
 
 ## Related
 
+<div align="center">
+
 | Project | Description |
 |---|---|
 | [javelin-cli](https://github.com/DesmondQue/javelin-cli) | Command-line SBFL tool (standalone, Homebrew/Scoop installable) |
+
+</div>
 
 ---
 
