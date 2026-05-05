@@ -33,7 +33,7 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 
 <br>
 
-> **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation -- the plugin runs using IntelliJ's bundled runtime. Your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21).
+> **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation. The plugin runs using IntelliJ's bundled runtime, and your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21).
 
 ---
 
@@ -49,11 +49,11 @@ In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from D
 
 ## Quick Start
 
-1. **Compile your project** -- `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests`
-2. **Open the Javelin tool window** -- it appears at the bottom of the IDE after installation
-3. **Click Auto-Detect** -- Javelin finds your compiled classes, test classes, and classpath automatically
-4. **Click Run Javelin Analysis** (or press `Ctrl+Shift+J`)
-5. **Explore the results** -- double-click any row to jump to the suspicious line in your editor
+1. **Compile your project:** `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests`
+2. **Open the Javelin tool window.** It appears at the bottom of the IDE after installation.
+3. **Click Auto-Detect.** Javelin finds your compiled classes, test classes, and classpath automatically.
+4. **Click Run Javelin Analysis** (or press `Ctrl+Shift+J`).
+5. **Explore the results.** Double-click any row to jump to the suspicious line in your editor.
 
 ---
 
@@ -91,9 +91,9 @@ Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven p
 | **Test classes** | Compiled test classes directory |
 | **Source directory** | Java source root (only required for Ochiai-MS) |
 | **Extra classpath** | Additional runtime dependencies your tests need |
-| **Algorithm** | Choose between Ochiai (fast, default) and Ochiai-MS (slower, experimental) -- see [Choosing an Algorithm](#choosing-an-algorithm) |
+| **Algorithm** | Choose between Ochiai (fast, default) and Ochiai-MS (slower, experimental). See [Choosing an Algorithm](#choosing-an-algorithm). |
 | **Granularity** | `statement` ranks individual lines (default), `method` groups results by method |
-| **Ranking** | `dense` for debugging (default), `average` for research evaluation -- see [CLI docs](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md#ranking-strategies) for details |
+| **Ranking** | `dense` for debugging (default), `average` for research evaluation. See [CLI docs](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md#ranking-strategies) for details. |
 | **Timeout** | Maximum analysis time in minutes (0 = no limit) |
 | **Threads** | Parallel test execution threads (defaults to CPU cores) |
 | **JVM home** | Override the JVM used to run tests (defaults to the project SDK) |
@@ -155,7 +155,7 @@ The right side of the Javelin tool window displays results in a table grouped by
 | **Name** | Class name (statement-level) or `Class#method` (method-level) |
 | **Line** | Source line number or line range |
 | **Score** | Suspiciousness score from 0.0 (not suspicious) to 1.0 (most suspicious) |
-| **Band** | Severity level -- Critical, High, Medium, or Low |
+| **Band** | Severity level: Critical, High, Medium, or Low |
 | **Top-N** | Position in the overall ranked list |
 
 </div>
@@ -227,7 +227,7 @@ Hover over any highlighted line, gutter icon, or scrollbar mark to see its rank,
 
 <br>
 
-**Works alongside other plugins.** Javelin's indicators use standard IntelliJ APIs and are designed to coexist with built-in features like breakpoints, error highlights, and search results. Gutter icons occupy a separate slot from run/debug markers. If a coverage plugin is active at the same time, its colors may blend with Javelin's -- toggle one off to keep results clear.
+**Works alongside other plugins.** Javelin's indicators use standard IntelliJ APIs and are designed to coexist with built-in features like breakpoints, error highlights, and search results. Gutter icons occupy a separate slot from run/debug markers. If a coverage plugin is active at the same time, its colors may blend with Javelin's. Toggle one off to keep results clear.
 
 ---
 
@@ -246,7 +246,7 @@ Hover over the widget to see its status:
 
 <br>
 
-Click the widget to see a readiness checklist showing whether your project has everything Javelin needs -- Java module detected, classes compiled, JDK available, and engine bundled:
+Click the widget to see a readiness checklist showing whether your project has everything Javelin needs: Java module detected, classes compiled, JDK available, and engine bundled.
 
 <div align="center">
 
@@ -291,7 +291,7 @@ Click the widget to see a readiness checklist showing whether your project has e
 
 ## Choosing an Algorithm
 
-Javelin offers two analysis modes. Both analyze the same test and coverage data -- they differ in how they score suspiciousness.
+Javelin offers two analysis modes. Both analyze the same test and coverage data, but they differ in how they score suspiciousness.
 
 ### Ochiai (default)
 
