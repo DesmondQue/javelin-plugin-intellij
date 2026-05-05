@@ -24,7 +24,7 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 <div align="center">
 
 | Requirement | Details |
-|---|---|
+|---|:---|
 | **IntelliJ IDEA** | 2025.1 through 2025.3.x (Community or Ultimate) |
 | **Java project** | Must be compiled (`.class` files present) with JUnit tests |
 | **At least 1 failing test** | Javelin needs failing tests to identify suspicious code |
@@ -86,7 +86,7 @@ Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven p
 <div align="center">
 
 | Setting | Description |
-|---|---|
+|---|:---|
 | **Target classes** | Compiled application classes directory |
 | **Test classes** | Compiled test classes directory |
 | **Source directory** | Java source root (only required for Ochiai-MS) |
@@ -114,7 +114,7 @@ You can start an analysis from several places:
 <div align="center">
 
 | Method | How |
-|---|---|
+|---|:---|
 | **Configuration panel** | Click **Run Javelin Analysis** |
 | **Keyboard shortcut** | `Ctrl+Shift+J` |
 | **Menu** | `Tools > Run Javelin Analysis` |
@@ -151,7 +151,7 @@ The right side of the Javelin tool window displays results in a table grouped by
 <div align="center">
 
 | Column | Description |
-|---|---|
+|---|:---|
 | **Name** | Class name (statement-level) or `Class#method` (method-level) |
 | **Line** | Source line number or line range |
 | **Score** | Suspiciousness score from 0.0 (not suspicious) to 1.0 (most suspicious) |
@@ -206,7 +206,7 @@ Lines are colored by suspicion band, with gutter icons on the left and stripe ma
 <div align="center">
 
 | Band | Color | Meaning |
-|---|---|---|
+|---|---|:---|
 | **Critical** | Red | Top 10% most suspicious |
 | **High** | Orange | Top 25% most suspicious |
 | **Medium** | Yellow | Remaining suspicious lines (score > 0) |
@@ -251,7 +251,7 @@ Click the widget to see a readiness checklist showing whether your project has e
 <div align="center">
 
 | Icon | Meaning |
-|---|---|
+|---|:---|
 | **Javelin checkmark** | Ready to run |
 | **Javelin !** | Some checks failing |
 | **Javelin dash** | Not ready |
@@ -328,7 +328,7 @@ For the mathematical formulas and implementation details behind both algorithms,
 <div align="center">
 
 | Document | Description |
-|---|---|
+|---|:---|
 | [Build Guide](javelin-plugin/docs/BUILDING.md) | Build from source, run in development mode, run tests |
 | [Architecture](javelin-plugin/docs/ARCHITECTURE.md) | System architecture, data flow, and design decisions |
 | [Java Compatibility](javelin-plugin/docs/JAVA_COMPATIBILITY.md) | Testing matrix, bytecode versions, and JVM selection |
@@ -344,7 +344,7 @@ For the mathematical formulas and implementation details behind both algorithms,
 <div align="center">
 
 | Project | Description |
-|---|---|
+|---|:---|
 | [javelin-cli](https://github.com/DesmondQue/javelin-cli) | Command-line SBFL tool (standalone, Homebrew/Scoop installable) |
 
 </div>

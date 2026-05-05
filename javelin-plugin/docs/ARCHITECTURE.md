@@ -75,7 +75,7 @@ When the process completes, the plugin reads the CSV output file produced by jav
 **JavelinHighlightProvider** maps results to editor annotations using IntelliJ's `MarkupModel` API:
 
 | Component | API | Details |
-|---|---|---|
+|---|---|:---|
 | Line highlights | `RangeHighlighter` | Layer `SELECTION - 100`, semi-transparent (alpha 70) |
 | Gutter icons | `GutterIconRenderer` | SVG icons per band, LEFT alignment |
 | Stripe marks | `setErrorStripeMarkColor()` | Shares the error stripe with IntelliJ markers |

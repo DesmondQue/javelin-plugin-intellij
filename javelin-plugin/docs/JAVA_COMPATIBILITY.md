@@ -7,7 +7,7 @@ Each `.class` file contains a major version number in its header that identifies
 ## Bytecode Version Reference
 
 | Java Version | Bytecode Major Version |
-|---|---|
+|---|:---|
 | Java 8 | 52 |
 | Java 11 | 55 |
 | Java 17 | 61 |
@@ -20,7 +20,7 @@ Java bytecode is forward-compatible: classes compiled for older JDKs will load a
 Javelin has been tested against real-world open-source projects from the [Defects4J](https://github.com/rjust/defects4j) benchmark across multiple Java versions.
 
 | Java Version | Bytecode | Testing Level | Projects Tested | Notes |
-|---|---|---|---|---|
+|---|---|---|:---|:---|
 | **Java 8** | 52 | Heavy | Commons-CSV, Commons-Math, JFreeChart, Closure Compiler, Mockito, Joda-Time | Primary testing target. Full coverage of both Ochiai and Ochiai-MS. |
 | **Java 11** | 55 | Heavy | Commons-CSV, Commons-Math, JFreeChart | Second primary target. Validated both algorithms and offline mode. |
 | **Java 17** | 61 | Light | Selected Defects4J projects | Spot-checked for compatibility. No issues found. |
@@ -45,7 +45,7 @@ You do not need Java 21 installed separately. The plugin uses IntelliJ's bundled
 The engine is compiled to Java 11 bytecode but requires Java 21+ to run (it uses Java 21 APIs internally). It analyzes your project's `.class` files using:
 
 | Component | Minimum JVM | What It Analyzes |
-|---|---|---|
+|---|---|:---|
 | **JaCoCo 0.8.12** | Java 8+ | Java 5+ bytecode |
 | **PITest 1.17.4** | Java 11+ | Any bytecode loadable by the host JVM |
 
