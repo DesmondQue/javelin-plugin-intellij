@@ -110,19 +110,18 @@ public final class RunJavelinAction extends AnAction {
                         LocalizationResult top = results.isEmpty() ? null : results.get(0);
                         long durationNanos = service.getLastRunDurationNanos();
                         double seconds = durationNanos > 0 ? durationNanos / 1_000_000_000.0 : 0.0;
-                        String summary = top == null
+                        String title = top == null
                                 ? String.format(Locale.ROOT, "Javelin found 0 suspicious entries in %.2fs.", seconds)
-                                : switch (top) {
-                                    case StatementResult sr -> String.format(
-                                            Locale.ROOT,
-                                            "Javelin found %d suspicious entries in %.2fs (top: %s:%d with score %.6f).",
-                                            results.size(), seconds, sr.fullyQualifiedClass(), sr.lineNumber(), sr.score());
-                                    case MethodResult mr -> String.format(
-                                            Locale.ROOT,
-                                            "Javelin found %d suspicious entries in %.2fs (top: %s#%s with score %.6f).",
-                                            results.size(), seconds, mr.fullyQualifiedClass(), mr.methodName(), mr.score());
-                                };
-                        notifyUser(project, summary, NotificationType.INFORMATION);
+                                : String.format(Locale.ROOT, "Javelin found %d suspicious entries in %.2fs.", results.size(), seconds);
+                        String detail = top == null ? "" : switch (top) {
+                            case StatementResult sr -> String.format(
+                                    Locale.ROOT, "Top: %s:%d (score %.6f)",
+                                    sr.fullyQualifiedClass(), sr.lineNumber(), sr.score());
+                            case MethodResult mr -> String.format(
+                                    Locale.ROOT, "Top: %s#%s (score %.6f)",
+                                    mr.fullyQualifiedClass(), mr.methodName(), mr.score());
+                        };
+                        notifyUser(project, title, detail, NotificationType.INFORMATION);
                     } catch (ProcessCanceledException ex) {
                         notifyUser(project, "Javelin analysis was cancelled.", NotificationType.INFORMATION);
                     } catch (Exception ex) {
@@ -167,6 +166,13 @@ public final class RunJavelinAction extends AnAction {
         NotificationGroupManager.getInstance()
                 .getNotificationGroup("Javelin Notifications")
                 .createNotification(content, type)
+                .notify(project);
+    }
+
+    private static void notifyUser(Project project, String title, String content, NotificationType type) {
+        NotificationGroupManager.getInstance()
+                .getNotificationGroup("Javelin Notifications")
+                .createNotification(title, content, type)
                 .notify(project);
     }
 }
