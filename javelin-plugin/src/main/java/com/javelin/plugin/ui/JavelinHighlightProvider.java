@@ -75,6 +75,7 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             this.primaryLineKeys = buildPrimaryLineKeys(lastResults);
         }
         applyToOpenEditors();
+        DaemonCodeAnalyzer.getInstance(project).restart();
     }
 
     @Override
@@ -85,6 +86,17 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
             applyToOpenEditors();
             DaemonCodeAnalyzer.getInstance(project).restart();
         });
+    }
+
+    public void refresh() {
+        JavelinService service = project.getService(JavelinService.class);
+        if (service != null) {
+            List<LocalizationResult> results = service.getLastResults();
+            this.entryIndex = buildIndex(results);
+            this.primaryLineKeys = buildPrimaryLineKeys(results);
+        }
+        applyToOpenEditors();
+        DaemonCodeAnalyzer.getInstance(project).restart();
     }
 
     public void setHighlightingEnabled(boolean enabled) {

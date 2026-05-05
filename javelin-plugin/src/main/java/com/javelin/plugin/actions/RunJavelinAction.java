@@ -22,6 +22,7 @@ import com.javelin.plugin.model.LocalizationResult;
 import com.javelin.plugin.model.MethodResult;
 import com.javelin.plugin.model.StatementResult;
 import com.javelin.plugin.service.JavelinService;
+import com.javelin.plugin.ui.JavelinHighlightProvider;
 import com.javelin.plugin.util.PathDetector;
 
 import java.nio.file.Path;
@@ -99,6 +100,10 @@ public final class RunJavelinAction extends AnAction {
 
                         ApplicationManager.getApplication().invokeLater(() -> {
                             ToolWindowManager.getInstance(project).getToolWindow("Javelin").activate(null);
+                            JavelinHighlightProvider provider = project.getService(JavelinHighlightProvider.class);
+                            if (provider != null) {
+                                provider.refresh();
+                            }
                         });
 
                         LocalizationResult top = results.isEmpty() ? null : results.get(0);
