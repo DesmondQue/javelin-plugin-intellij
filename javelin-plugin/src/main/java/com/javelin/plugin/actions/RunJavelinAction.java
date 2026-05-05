@@ -111,15 +111,15 @@ public final class RunJavelinAction extends AnAction {
                         long durationNanos = service.getLastRunDurationNanos();
                         double seconds = durationNanos > 0 ? durationNanos / 1_000_000_000.0 : 0.0;
                         String title = top == null
-                                ? String.format(Locale.ROOT, "Javelin found 0 suspicious entries in %.2fs.", seconds)
-                                : String.format(Locale.ROOT, "Javelin found %d suspicious entries in %.2fs.", results.size(), seconds);
+                                ? String.format(Locale.ROOT, "Found 0 entries in %.2fs.", seconds)
+                                : String.format(Locale.ROOT, "Found %d entries in %.2fs.", results.size(), seconds);
                         String detail = top == null ? "" : switch (top) {
                             case StatementResult sr -> String.format(
                                     Locale.ROOT, "Top: %s:%d (score %.6f)",
-                                    sr.fullyQualifiedClass(), sr.lineNumber(), sr.score());
+                                    simpleClassName(sr.fullyQualifiedClass()), sr.lineNumber(), sr.score());
                             case MethodResult mr -> String.format(
                                     Locale.ROOT, "Top: %s#%s (score %.6f)",
-                                    mr.fullyQualifiedClass(), mr.methodName(), mr.score());
+                                    simpleClassName(mr.fullyQualifiedClass()), mr.methodName(), mr.score());
                         };
                         notifyUser(project, title, detail, NotificationType.INFORMATION);
                     } catch (ProcessCanceledException ex) {
@@ -174,5 +174,10 @@ public final class RunJavelinAction extends AnAction {
                 .getNotificationGroup("Javelin Notifications")
                 .createNotification(title, content, type)
                 .notify(project);
+    }
+
+    private static String simpleClassName(String fullyQualifiedClass) {
+        int lastDot = fullyQualifiedClass.lastIndexOf('.');
+        return lastDot >= 0 ? fullyQualifiedClass.substring(lastDot + 1) : fullyQualifiedClass;
     }
 }
