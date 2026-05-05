@@ -163,12 +163,33 @@ public final class CoreProcessRunner {
             CapturingProcessHandler handler = new CapturingProcessHandler(cmd);
             if (stderrLineCallback != null) {
                 handler.addProcessListener(new ProcessAdapter() {
+                    private final StringBuilder stderrBuffer = new StringBuilder();
+
                     @Override
                     public void onTextAvailable(ProcessEvent event, Key outputType) {
                         if (ProcessOutputTypes.STDERR.equals(outputType)) {
-                            String text = event.getText().strip();
-                            if (!text.isBlank()) {
-                                stderrLineCallback.accept(text);
+                            stderrBuffer.append(event.getText());
+                            drainCompleteLines(stderrLineCallback);
+                        }
+                    }
+
+                    @Override
+                    public void processTerminated(ProcessEvent event) {
+                        drainCompleteLines(stderrLineCallback);
+                        String remainder = stderrBuffer.toString().strip();
+                        if (!remainder.isBlank()) {
+                            stderrLineCallback.accept(remainder);
+                        }
+                        stderrBuffer.setLength(0);
+                    }
+
+                    private void drainCompleteLines(Consumer<String> callback) {
+                        int nl;
+                        while ((nl = stderrBuffer.indexOf("\n")) >= 0) {
+                            String line = stderrBuffer.substring(0, nl).strip();
+                            stderrBuffer.delete(0, nl + 1);
+                            if (!line.isBlank()) {
+                                callback.accept(line);
                             }
                         }
                     }
