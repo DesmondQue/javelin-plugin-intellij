@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 import com.intellij.openapi.compiler.CompilationStatusListener;
 import com.intellij.openapi.compiler.CompilerTopics;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
@@ -34,6 +35,7 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.util.ui.JBUI;
 import com.javelin.plugin.service.JavelinService;
+import com.javelin.plugin.ui.JavelinResultsListener;
 
 public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFactory {
 
@@ -82,12 +84,15 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
                 }
             });
 
-            project.getMessageBus().connect(this).subscribe(CompilerTopics.COMPILATION_STATUS, new CompilationStatusListener() {
+            var connection = project.getMessageBus().connect(this);
+            connection.subscribe(CompilerTopics.COMPILATION_STATUS, new CompilationStatusListener() {
                 @Override
                 public void compilationFinished(boolean aborted, int errors, int warnings, @NotNull com.intellij.openapi.compiler.CompileContext compileContext) {
                     refresh();
                 }
             });
+            connection.subscribe(JavelinResultsListener.TOPIC, results -> refresh());
+            DumbService.getInstance(project).runWhenSmart(this::refresh);
             refresh();
         }
 
@@ -147,6 +152,7 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
                 return;
             }
 
+            refresh();
             JavelinService service = project.getService(JavelinService.class);
             boolean running = service != null && service.isRunning();
             List<JavelinStatusPopupPanel.Requirement> reqs = computeRequirements();

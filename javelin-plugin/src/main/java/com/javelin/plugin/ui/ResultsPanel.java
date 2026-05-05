@@ -90,7 +90,13 @@ public final class ResultsPanel extends JPanel {
 
         this.rootNode = new DefaultMutableTreeNode("Results");
         this.treeTableModel = new ListTreeTableModelOnColumns(rootNode, COLUMNS);
-        this.treeTable = new TreeTable(treeTableModel);
+        this.treeTable = new TreeTable(treeTableModel) {
+            @Override
+            public String getToolTipText(MouseEvent event) {
+                if (currentResults.isEmpty()) return null;
+                return super.getToolTipText(event);
+            }
+        };
         this.treeTable.setRootVisible(false);
         this.treeTable.getTree().setShowsRootHandles(true);
         this.treeTable.getTree().setRootVisible(false);
@@ -260,6 +266,11 @@ public final class ResultsPanel extends JPanel {
         rebuildTree(currentGroups);
         updateStatsLabel();
         updateStatusLabel(results.size());
+        if (results.isEmpty()) {
+            javax.swing.ToolTipManager.sharedInstance().mouseExited(
+                    new MouseEvent(treeTable, MouseEvent.MOUSE_EXITED,
+                            System.currentTimeMillis(), 0, 0, 0, 0, false));
+        }
     }
 
     private void updateStatsLabel() {
@@ -714,6 +725,8 @@ public final class ResultsPanel extends JPanel {
                         + "<br/><b>Lines:</b> " + mr.firstLine() + "-" + mr.lastLine()
                         + "<br/><b>Score:</b> " + String.format(Locale.ROOT, "%.6f", mr.score())
                         + "</html>");
+            } else {
+                setToolTipText(null);
             }
         }
     }

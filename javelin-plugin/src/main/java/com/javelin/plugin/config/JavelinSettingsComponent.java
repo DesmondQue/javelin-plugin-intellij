@@ -35,6 +35,7 @@ public final class JavelinSettingsComponent {
     private final JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(maxThreads, 1, maxThreads, 1));
     private final JSpinner timeoutSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 120, 1));
     private final TextFieldWithBrowseButton jvmHomeField = new TextFieldWithBrowseButton();
+    private final JCheckBox buildFirstCheckbox = new JCheckBox("Build project before analysis");
     private final JCheckBox highlightCheckbox = new JCheckBox("Line background highlighting");
     private final JCheckBox gutterCheckbox = new JCheckBox("Gutter icons");
     private final JCheckBox stripeCheckbox = new JCheckBox("Scrollbar stripe marks");
@@ -49,7 +50,9 @@ public final class JavelinSettingsComponent {
         formPanel.add(new TitledSeparator("Analysis Defaults"), sectionConstraints(row++));
 
         addLabeledRow(formPanel, "Algorithm:", algorithmCombo, row++);
-        algorithmCombo.setToolTipText("Fault localization algorithm to use");
+        algorithmCombo.setToolTipText(
+                "<html><b>ochiai</b>: coverage-based SBFL ranking<br>"
+                + "<b>ochiai-ms</b> (experimental): mutation-aware variant using PITest for enhanced ranking</html>");
 
         addLabeledRow(formPanel, "Granularity:", granularityCombo, row++);
         granularityCombo.setToolTipText(
@@ -72,6 +75,9 @@ public final class JavelinSettingsComponent {
         jvmHomeDescriptor.setTitle("JVM Home Directory");
         jvmHomeField.addBrowseFolderListener(null, jvmHomeDescriptor);
         jvmHomeField.getTextField().setToolTipText("Override the JVM used to run tests (defaults to project SDK)");
+
+        addCheckboxRow(formPanel, buildFirstCheckbox, row++);
+        buildFirstCheckbox.setToolTipText("Compile the project before running analysis (disable if you build manually)");
 
         // --- Editor Appearance ---
         formPanel.add(new TitledSeparator("Editor Appearance"), sectionConstraints(row++));
@@ -156,6 +162,10 @@ public final class JavelinSettingsComponent {
         return jvmHomeField.getText().trim();
     }
 
+    public boolean isBuildFirst() {
+        return buildFirstCheckbox.isSelected();
+    }
+
     public boolean isHighlightEnabled() {
         return highlightCheckbox.isSelected();
     }
@@ -208,6 +218,10 @@ public final class JavelinSettingsComponent {
         jvmHomeField.setText(path == null ? "" : path);
     }
 
+    public void setBuildFirst(boolean enabled) {
+        buildFirstCheckbox.setSelected(enabled);
+    }
+
     public void setHighlightEnabled(boolean enabled) {
         highlightCheckbox.setSelected(enabled);
     }
@@ -235,6 +249,7 @@ public final class JavelinSettingsComponent {
         setThreads(maxThreads);
         setTimeoutMinutes(JavelinUiSettings.DEFAULT_TIMEOUT_MINUTES);
         setJvmHome(JavelinUiSettings.DEFAULT_JVM_HOME);
+        setBuildFirst(JavelinUiSettings.DEFAULT_BUILD_FIRST);
         setHighlightEnabled(JavelinUiSettings.DEFAULT_HIGHLIGHT_ENABLED);
         setGutterEnabled(JavelinUiSettings.DEFAULT_GUTTER_ENABLED);
         setStripeEnabled(JavelinUiSettings.DEFAULT_STRIPE_ENABLED);

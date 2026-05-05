@@ -28,6 +28,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.ui.components.JBLabel;
+import com.intellij.ui.components.JBScrollPane;
 import com.javelin.plugin.actions.RunJavelinAction;
 import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.service.JavelinService;
@@ -98,7 +99,10 @@ public final class ConfigurationPanel extends JPanel {
                 JavelinUiSettings.setAlgorithm(project, selected.toString());
             }
         });
-        algorithmCombo.setToolTipText("Fault localization algorithm to use");
+        algorithmCombo.setToolTipText(
+                "<html><b>ochiai</b>: coverage-based SBFL ranking<br>"
+                + "<b>ochiai-ms</b> (experimental): mutation-aware variant using PITest for enhanced ranking</html>");
+        algorithmCombo.setRenderer(new HintListCellRenderer(Map.of()));
 
         granularityCombo.setSelectedItem(JavelinUiSettings.getGranularity(project));
         granularityCombo.addActionListener(e -> {
@@ -136,14 +140,10 @@ public final class ConfigurationPanel extends JPanel {
         timeoutSpinner.setValue(JavelinUiSettings.getTimeoutMinutes(project));
         timeoutSpinner.addChangeListener(e -> JavelinUiSettings.setTimeoutMinutes(project, (Integer) timeoutSpinner.getValue()));
         timeoutSpinner.setToolTipText(
-                "<html>Maximum time for the entire analysis in minutes,<br>"
-                + "including coverage, mutation testing, and scoring.<br>"
-                + "Set to 0 (default) for no time limit.<br><br>"
-                + "Individual mutants that cause infinite loops are still<br>"
-                + "killed by PITest's per-mutation timeout regardless of<br>"
-                + "this setting.<br><br>"
-                + "For large projects, consider setting a limit (e.g. 60-120 min)<br>"
-                + "to prevent unexpectedly long runs.</html>");
+                "<html>Maximum analysis time in minutes (0 = no limit).<br>"
+                + "Covers coverage, mutation testing, and scoring.<br><br>"
+                + "Per-mutation timeouts are handled separately by PITest.<br>"
+                + "Recommended to set a limit when using ochiai-ms.</html>");
 
         buildFirstCheckbox.setSelected(JavelinUiSettings.isBuildFirst(project));
         buildFirstCheckbox.addChangeListener(e -> JavelinUiSettings.setBuildFirst(project, buildFirstCheckbox.isSelected()));
@@ -166,13 +166,6 @@ public final class ConfigurationPanel extends JPanel {
         addRow(formPanel, "", buildFirstCheckbox, row++);
         addRow(formPanel, "", offlineCheckbox, row++);
 
-        GridBagConstraints spacer = new GridBagConstraints();
-        spacer.gridx = 0;
-        spacer.gridy = row;
-        spacer.weighty = 1.0;
-        spacer.fill = GridBagConstraints.VERTICAL;
-        formPanel.add(new JPanel(), spacer);
-
         JPanel buttonPanel = new JPanel(new GridBagLayout());
         GridBagConstraints bgbc = new GridBagConstraints();
         bgbc.gridx = 0;
@@ -189,7 +182,9 @@ public final class ConfigurationPanel extends JPanel {
         autoDetectButton.addActionListener(e -> autoDetect());
         runButton.addActionListener(e -> runFromPanel());
 
-        add(formPanel, BorderLayout.CENTER);
+        JBScrollPane scrollPane = new JBScrollPane(formPanel);
+        scrollPane.setBorder(null);
+        add(scrollPane, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
 
         updateSourceDirVisibility();

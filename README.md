@@ -12,7 +12,7 @@ Javelin wraps the [javelin-cli](https://github.com/DesmondQue/javelin-cli) engin
 
 | Requirement | Details |
 |---|---|
-| **IntelliJ IDEA** | 2025.1 -- 2025.3.x (Community or Ultimate) |
+| **IntelliJ IDEA** | 2025.1 through 2025.3.x (Community or Ultimate) |
 | **Java project** | The project must be a compiled Java project with JUnit tests |
 | **At least 1 failing test** | SBFL requires at least one failing test to localize faults |
 
@@ -96,7 +96,7 @@ Results appear in a **TreeTable** grouped by rank:
 |---|---|
 | **Name** | Rank group header (expandable) or fully qualified class name (statement) / `Class#method` (method-level) |
 | **Line** | Source line number (statement) or first--last line range (method-level) |
-| **Score** | Ochiai suspiciousness score (0.0 -- 1.0) |
+| **Score** | Ochiai suspiciousness score (0.0 to 1.0) |
 | **Band** | Severity band with colored indicator (Critical / High / Medium / Low) |
 | **Top-N** | Cumulative position in ranked list |
 
@@ -133,7 +133,7 @@ The status bar widget (bottom-right) shows project readiness at a glance:
 
 | Icon | Meaning |
 |---|---|
-| **Javelin ✓** | All checks passed -- ready to run |
+| **Javelin ✓** | All checks passed, ready to run |
 | **Javelin !** | Some checks failing |
 | **Javelin –** | No checks passing |
 | **Javelin ↻** | Analysis running |
@@ -160,7 +160,7 @@ Configure defaults via **Settings > Tools > Javelin**. Saved defaults persist ac
 | Algorithm | Flag | Description |
 |---|---|---|
 | **Ochiai** | `ochiai` | Standard SBFL using test pass/fail spectra and code coverage |
-| **Ochiai-MS** | `ochiai-ms` | Experimental -- integrates mutation testing (PITest) into the SBFL pipeline; requires a source directory |
+| **Ochiai-MS** | `ochiai-ms` | Experimental. Integrates mutation testing (PITest) into the SBFL pipeline; requires a source directory |
 
 Both algorithms are available in the CLI ([javelin-cli](https://github.com/DesmondQue/javelin-cli)) and the plugin.
 
@@ -190,6 +190,7 @@ See the CLI's [ALGORITHMS.md](https://github.com/DesmondQue/javelin-cli/blob/mai
 
 - **Project must be compiled first.** Javelin operates on `.class` files and does not invoke the build tool. Run `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests` before analysis.
 - **Build-tool orchestrated tests.** Tests that require the build tool to manage external infrastructure (e.g., Arquillian server lifecycle, Maven Failsafe phase orchestration) are not supported. Most tests work, including Spring Boot `@SpringBootTest` and Testcontainers.
+- **JVM behavioral differences with older projects.** The plugin runs tests using either the project SDK (Java 11+) or IntelliJ's bundled JBR (Java 21) as a fallback. Projects targeting Java 8+ are fully supported and tested. Projects targeting Java 7 and below may encounter runtime differences when tests execute on a newer JVM, such as removed internal APIs, module access restrictions, or changed runtime defaults. Use the **Override JVM home** field to specify a JDK matching the project's target version. See the javelin-cli [JVM Compatibility](https://github.com/DesmondQue/javelin-cli#jvm-compatibility) documentation for full details.
 
 ---
 

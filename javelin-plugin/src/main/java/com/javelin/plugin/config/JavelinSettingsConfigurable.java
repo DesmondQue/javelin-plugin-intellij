@@ -45,6 +45,7 @@ public final class JavelinSettingsConfigurable implements Configurable {
         if (component.getThreads() != JavelinUiSettings.getDefaultMaxThreads(project)) return true;
         if (component.getTimeoutMinutes() != JavelinUiSettings.getDefaultTimeoutMinutes(project)) return true;
         if (!Objects.equals(component.getJvmHome(), JavelinUiSettings.getDefaultJvmHome(project))) return true;
+        if (component.isBuildFirst() != JavelinUiSettings.isDefaultBuildFirst(project)) return true;
         if (component.isHighlightEnabled() != JavelinUiSettings.isDefaultHighlightEnabled(project)) return true;
         if (component.isGutterEnabled() != JavelinUiSettings.isDefaultGutterEnabled(project)) return true;
         if (component.isStripeEnabled() != JavelinUiSettings.isDefaultStripeEnabled(project)) return true;
@@ -63,6 +64,7 @@ public final class JavelinSettingsConfigurable implements Configurable {
         JavelinUiSettings.setDefaultMaxThreads(project, component.getThreads());
         JavelinUiSettings.setDefaultTimeoutMinutes(project, component.getTimeoutMinutes());
         JavelinUiSettings.setDefaultJvmHome(project, component.getJvmHome());
+        JavelinUiSettings.setDefaultBuildFirst(project, component.isBuildFirst());
         JavelinUiSettings.setDefaultHighlightEnabled(project, component.isHighlightEnabled());
         JavelinUiSettings.setDefaultGutterEnabled(project, component.isGutterEnabled());
         JavelinUiSettings.setDefaultStripeEnabled(project, component.isStripeEnabled());
@@ -74,6 +76,7 @@ public final class JavelinSettingsConfigurable implements Configurable {
         JavelinUiSettings.setMaxThreads(project, component.getThreads());
         JavelinUiSettings.setTimeoutMinutes(project, component.getTimeoutMinutes());
         JavelinUiSettings.setJvmHome(project, component.getJvmHome());
+        JavelinUiSettings.setBuildFirst(project, component.isBuildFirst());
 
         JavelinHighlightProvider provider = project.getService(JavelinHighlightProvider.class);
         if (provider != null) {
@@ -99,6 +102,7 @@ public final class JavelinSettingsConfigurable implements Configurable {
         component.setThreads(JavelinUiSettings.getDefaultMaxThreads(project));
         component.setTimeoutMinutes(JavelinUiSettings.getDefaultTimeoutMinutes(project));
         component.setJvmHome(JavelinUiSettings.getDefaultJvmHome(project));
+        component.setBuildFirst(JavelinUiSettings.isDefaultBuildFirst(project));
         component.setHighlightEnabled(JavelinUiSettings.isDefaultHighlightEnabled(project));
         component.setGutterEnabled(JavelinUiSettings.isDefaultGutterEnabled(project));
         component.setStripeEnabled(JavelinUiSettings.isDefaultStripeEnabled(project));
