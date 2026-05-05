@@ -1,10 +1,12 @@
 # Javelin Plugin for IntelliJ IDEA
 
-An IntelliJ IDEA plugin for **Spectrum-Based Fault Localization (SBFL)** of Java projects. Javelin analyzes test pass/fail data and code coverage to rank lines of code by suspiciousness, helping you find bugs faster, directly inside your IDE.
+**Find the bug, not just the failing test.**
 
-Javelin wraps the [javelin-cli](https://github.com/DesmondQue/javelin-cli) engine and supports both the standard **Ochiai** algorithm and the experimental **Ochiai-MS** algorithm (mutation-score weighted SBFL).
+Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list pointing you toward the most likely source of the bug.
 
-> **⚠️ Experimental:** The Ochiai-MS algorithm is an active area of research and should be considered experimental. Results and behavior may change in future releases.
+This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin brings it into IntelliJ IDEA as a one-click workflow with in-editor highlighting.
+
+![Javelin overview](javelin-plugin/docs/images/hero.png)
 
 ---
 
@@ -13,41 +15,30 @@ Javelin wraps the [javelin-cli](https://github.com/DesmondQue/javelin-cli) engin
 | Requirement | Details |
 |---|---|
 | **IntelliJ IDEA** | 2025.1 through 2025.3.x (Community or Ultimate) |
-| **Java project** | The project must be a compiled Java project with JUnit tests |
-| **At least 1 failing test** | SBFL requires at least one failing test to localize faults |
+| **Java project** | Must be compiled (`.class` files present) with JUnit tests |
+| **At least 1 failing test** | Javelin needs failing tests to identify suspicious code |
 
-> **Note:** The plugin bundles its own `javelin-core` engine. You do **not** need a separate JDK 21 installation, the plugin runs the engine using IntelliJ's bundled JBR (Java Runtime). The project being analyzed can use **Java 8 or later**. It currently has been tested on **Java 8, Java 11, Java 17, and Java 21** projects.
+> **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation -- the plugin runs using IntelliJ's bundled runtime. Your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21).
 
 ---
 
 ## Installation
 
-### Install from Disk
+Download the latest `javelin-plugin-0.1.2.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page.
 
-1. Download the latest `javelin-plugin-0.1.2.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page (or build from source).
-2. In IntelliJ IDEA, go to **Settings → Plugins → ⚙️ → Install Plugin from Disk…**
-3. Select the `.zip` file and click **OK**.
-4. Restart IntelliJ IDEA when prompted.
+In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
 
-### Build from Source
+> To build from source or run in development mode, see the [Build Guide](javelin-plugin/docs/BUILDING.md).
 
-```bash
-# 1. Build javelin-core fat JAR (from the javelin-cli repo)
-cd javelin-core
-./gradlew fatJar --no-daemon
+---
 
-# 2. Build the plugin ZIP
-cd ../javelin-plugin
-./gradlew buildPlugin --no-daemon
-```
+## Quick Start
 
-The distributable ZIP will be at `build/distributions/javelin-plugin-0.1.2.zip`.
-
-### Run in Development Mode
-
-```bash
-./gradlew runIde --no-daemon
-```
+1. **Compile your project** -- `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests`
+2. **Open the Javelin tool window** -- it appears at the bottom of the IDE after installation
+3. **Click Auto-Detect** -- Javelin finds your compiled classes, test classes, and classpath automatically
+4. **Click Run Javelin Analysis** (or press `Ctrl+Shift+J`)
+5. **Explore the results** -- double-click any row to jump to the suspicious line in your editor
 
 ---
 
@@ -55,142 +46,169 @@ The distributable ZIP will be at `build/distributions/javelin-plugin-0.1.2.zip`.
 
 ### Configuration Panel
 
-The Javelin tool window (bottom of the IDE) has a split layout:
+The left side of the Javelin tool window is the configuration panel, where you set up what Javelin should analyze.
 
-- **Left panel** - Configuration with auto-detected paths and manual overrides:
-  - **Target classes** - Compiled application classes directory
-  - **Test classes** - Compiled test classes directory
-  - **Source directory** - Java source root (required for Ochiai-MS)
-  - **Extra classpath** - Additional runtime dependencies (passed as `-c` to javelin-core)
-  - **Algorithm** - `ochiai` (default) or `ochiai-ms`
-  - **Granularity** - `statement` (default, ranks individual lines) or `method` (aggregates to methods using max score)
-  - **Ranking** - `dense` (default, recommended for debugging) or `average` (MID formula for SBFL evaluation and EXAM scores)
-  - **Timeout (min)** - Maximum time for the entire analysis (coverage, mutation testing, and scoring) in minutes. Set to 0 (default) for no time limit. Individual mutants that cause infinite loops are still killed by PITest's per-mutation timeout regardless of this setting. For large projects, consider setting a limit (e.g., 60--120 min) to prevent unexpectedly long runs.
-  - **Threads** - Parallel test execution threads (defaults to CPU cores)
-  - **JVM home** - Override the JVM used for test subprocesses (defaults to the project SDK)
-  - **Offline mode** - Force offline bytecode instrumentation (for projects using mockito-inline, bytebuddy-agent, etc.)
-- **Right panel** - Results view (see below)
+![Configuration panel](javelin-plugin/docs/images/configuration-panel.png)
 
-Click **Auto-Detect** to automatically resolve target, test, and source directories as well as the module classpath for both Gradle and Maven project layouts.
+Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven project layouts. Fields marked with `*` are required. All detected paths can be overridden manually. Hover over any field label for a description of what it does.
 
-Fields marked with `*` are required. Paths are auto-detected on panel load (with a notification showing what was found) and can be overridden manually.
+![Algorithm tooltip](javelin-plugin/docs/images/tooltip.png)
+
+| Setting | Description |
+|---|---|
+| **Target classes** | Compiled application classes directory |
+| **Test classes** | Compiled test classes directory |
+| **Source directory** | Java source root (only required for Ochiai-MS) |
+| **Extra classpath** | Additional runtime dependencies your tests need |
+| **Algorithm** | Choose between Ochiai (fast, default) and Ochiai-MS (slower, experimental) -- see [Choosing an Algorithm](#choosing-an-algorithm) |
+| **Granularity** | `statement` ranks individual lines (default), `method` groups results by method |
+| **Ranking** | `dense` for debugging (default), `average` for research evaluation -- see [CLI docs](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md#ranking-strategies) for details |
+| **Timeout** | Maximum analysis time in minutes (0 = no limit) |
+| **Threads** | Parallel test execution threads (defaults to CPU cores) |
+| **JVM home** | Override the JVM used to run tests (defaults to the project SDK) |
+| **Offline mode** | Use pre-instrumented bytecode instead of a Java agent (needed for projects using mockito-inline, bytebuddy-agent, etc.) |
+
+---
 
 ### Running an Analysis
 
-Run the analysis using any of these methods:
+You can start an analysis from several places:
 
 | Method | How |
 |---|---|
-| **Configuration panel** | Fill in paths → click **Run Javelin Analysis** |
+| **Configuration panel** | Click **Run Javelin Analysis** |
 | **Keyboard shortcut** | `Ctrl+Shift+J` |
-| **Menu** | `Tools → Run Javelin Analysis` |
-| **Run Configuration** | `Run → Edit Configurations → + → Javelin` |
+| **Menu** | `Tools > Run Javelin Analysis` |
+| **Run Configuration** | `Run > Edit Configurations > + > Javelin` |
 
-The plugin will automatically detect target/test directories and resolve the module classpath. A notification appears when analysis completes, showing the number of suspicious lines, the top-ranked result, and execution time.
+![Running analysis](javelin-plugin/docs/images/running-analysis.png)
 
-### Viewing Results
+A notification appears when analysis completes, showing the number of suspicious lines found, the top-ranked result, and how long it took.
 
-Results appear in a **TreeTable** grouped by rank:
+---
+
+### Results Panel
+
+The right side of the Javelin tool window displays results in a table grouped by rank.
+
+![Results panel](javelin-plugin/docs/images/results-panel.png)
 
 | Column | Description |
 |---|---|
-| **Name** | Rank group header (expandable) or fully qualified class name (statement) / `Class#method` (method-level) |
-| **Line** | Source line number (statement) or first--last line range (method-level) |
-| **Score** | Ochiai suspiciousness score (0.0 to 1.0) |
-| **Band** | Severity band with colored indicator (Critical / High / Medium / Low) |
-| **Top-N** | Cumulative position in ranked list |
+| **Name** | Class name (statement-level) or `Class#method` (method-level) |
+| **Line** | Source line number or line range |
+| **Score** | Suspiciousness score from 0.0 (not suspicious) to 1.0 (most suspicious) |
+| **Band** | Severity level -- Critical, High, Medium, or Low |
+| **Top-N** | Position in the overall ranked list |
 
-Features:
-- **Sort** - Click any column header to sort (ascending / descending)
-- **Filter** - Type in the filter field to narrow by class or method name
-- **Navigate** - Double-click or press `Enter` to jump to the suspicious line in the editor
-- **Context menu** - Right-click for Copy and Export options
-- **Export** - Export filtered results to CSV (includes rank, class, line, score, percentile, and band classification)
-- **Statistics bar** - Displays test counts (passed/failed), coverage metrics, execution timing, and mutation data (for ochiai-ms)
+Click any column header to sort. Use the filter field to search by class or method name. Right-click for copy and export options. The statistics bar at the bottom shows test counts (passed/failed), coverage metrics, execution timing, and mutation data when using Ochiai-MS.
+
+Double-click a row (or press `Enter`) to navigate to that line in the editor. Hovering over a selected row shows its file path, line number, and score:
+
+![Selected row in results panel](javelin-plugin/docs/images/results-navigation-before-dclick-panel.png)
+
+The editor opens to the exact line, highlighted by suspicion band:
+
+![Editor navigated to suspicious line](javelin-plugin/docs/images/results-navigation-after-dclick-editor.png)
+
+---
 
 ### Visual Indicators
 
-Suspicious lines are highlighted directly in the editor using a 4-tier color scale:
+Javelin highlights suspicious lines directly in the editor using a 4-tier color scale so you can see risk at a glance while reading code.
+
+Lines are colored by suspicion band, with gutter icons on the left and stripe marks on the scrollbar to the right:
+
+![Editor with line highlights, gutter icons, and scrollbar stripe marks](javelin-plugin/docs/images/visual-indicators.png-highlight-gutter-scroll-indicators-editor.png)
 
 | Band | Color | Meaning |
 |---|---|---|
 | **Critical** | Red | Top 10% most suspicious |
-| **High** | Orange | Top 25% |
-| **Medium** | Yellow | Top 50% |
-| **Low** | Green | Lower-ranked lines |
+| **High** | Orange | Top 25% most suspicious |
+| **Medium** | Yellow | Remaining suspicious lines (score > 0) |
+| **Low** | Green | Covered by tests but not implicated (score = 0) |
 
-Visual features include:
-- **Line highlighting** - Background color on suspicious lines
-- **Gutter icons** - Colored dots in the left gutter
-- **Error stripe marks** - Colored markers on the right-side scrollbar
-- **Tooltips** - Hover over any indicator to see rank, score, and percentile
+Hover over any highlighted line, gutter icon, or scrollbar mark to see its rank, score, and percentile. Each indicator type (line highlighting, gutter icons, scrollbar marks) can be toggled independently from the toolbar. Use the band filter dropdown to show or hide specific severity levels:
 
-Each feature can be toggled from the Javelin tool window toolbar.
+![Band filter dropdown](javelin-plugin/docs/images/visual-indicators.png-icons-on-panel.png)
+
+**Works alongside other plugins.** Javelin's indicators use standard IntelliJ APIs and are designed to coexist with built-in features like breakpoints, error highlights, and search results. Gutter icons occupy a separate slot from run/debug markers. If a coverage plugin is active at the same time, its colors may blend with Javelin's -- toggle one off to keep results clear.
+
+---
 
 ### Status Bar Widget
 
-The status bar widget (bottom-right) shows project readiness at a glance:
+The widget in the bottom-right corner shows whether your project is ready for analysis.
+
+Hover over the widget to see its status:
+
+![Status bar hover tooltip](javelin-plugin/docs/images/status-bar-hover.png)
+
+Click the widget to see a readiness checklist showing whether your project has everything Javelin needs -- Java module detected, classes compiled, JDK available, and engine bundled:
+
+![Status bar readiness checklist](javelin-plugin/docs/images/status-bar-click.png)
 
 | Icon | Meaning |
 |---|---|
-| **Javelin ✓** | All checks passed, ready to run |
+| **Javelin checkmark** | Ready to run |
 | **Javelin !** | Some checks failing |
-| **Javelin –** | No checks passing |
-| **Javelin ↻** | Analysis running |
-
-**Hover** over the widget to see a readiness checklist (Java module, compiled classes, JDK, javelin-core) and a summary of the last analysis run (duration + result count).
-
-**Click** the widget to open the Javelin tool window.
-
-### Persistent Settings
-
-Configure defaults via **Settings > Tools > Javelin**. Saved defaults persist across sessions and are restored each time the tool window opens. Settings include:
-- Algorithm, granularity, and ranking strategy
-- Thread count and JVM home
-- Visualization preferences (highlighting, gutter icons, error stripes, visible bands)
-
-### Clearing Results
-
-**Tools > Clear Javelin Results** removes all highlights, gutter icons, stripe marks, and result data.
+| **Javelin dash** | Not ready |
+| **Javelin spinner** | Analysis in progress |
 
 ---
 
-## Algorithms
+### Settings and Clearing Results
 
-| Algorithm | Flag | Description |
-|---|---|---|
-| **Ochiai** | `ochiai` | Standard SBFL using test pass/fail spectra and code coverage |
-| **Ochiai-MS** | `ochiai-ms` | Experimental. Integrates mutation testing (PITest) into the SBFL pipeline; requires a source directory |
+**Persistent settings.** Go to **Settings > Tools > Javelin** to configure defaults that persist across sessions, including algorithm, granularity, thread count, and which visual indicators are enabled.
 
-Both algorithms are available in the CLI ([javelin-cli](https://github.com/DesmondQue/javelin-cli)) and the plugin.
+![Settings page](javelin-plugin/docs/images/settings-page.png)
 
-### Granularity & Ranking
-
-| Option | Values | Description |
-|---|---|---|
-| **Granularity** | `statement` (default), `method` | Statement ranks individual lines; method aggregates to methods using max score |
-| **Ranking** | `dense` (default), `average` | Dense gives clear integer ranks for debugging; average (MID) produces fractional ranks for SBFL evaluation (EXAM scores, Top-N metrics) |
-
-See the CLI's [ALGORITHMS.md](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md) for formulas and details.
+**Clearing results.** Go to **Tools > Clear Javelin Results** to remove all highlights, gutter icons, scrollbar marks, and result data from the editor.
 
 ---
 
-## How It Works
+## Choosing an Algorithm
 
-1. **Coverage Collection** - Runs JUnit tests with JaCoCo instrumentation to build per-test line coverage
-2. **Spectrum Analysis** - Constructs a hit matrix of which lines are executed by passing vs. failing tests
-3. **Suspiciousness Scoring** - Computes Ochiai (or Ochiai-MS) scores for each line
-4. **Method Aggregation** (if method-level) - Aggregates line scores to methods using the maximum score per method
-5. **Ranking & Grouping** - Ranks lines or methods by score (dense or average) and groups them by rank for display
-6. **Report Generation** - Exports ranked results to CSV and highlights them in the IDE
+Javelin offers two analysis modes. Both analyze the same test and coverage data -- they differ in how they score suspiciousness.
+
+### Ochiai (default)
+
+Uses test pass/fail outcomes and code coverage to rank lines. Fast, reliable, and sufficient for most debugging scenarios. This is the standard algorithm used in fault localization research.
+
+**When to use:** Start here. It runs in seconds to minutes depending on project size and gives good results for most bugs.
+
+### Ochiai-MS (experimental)
+
+Extends Ochiai by running mutation testing ([PITest](https://pitest.org/)) on the suspicious region, then adjusting scores based on how effectively each test kills mutants. This can improve precision for certain fault types but takes significantly longer.
+
+**When to use:** When Ochiai's results are inconclusive and you want to try a more thorough analysis. Requires a source directory. Expect analysis times of minutes to hours depending on project size.
+
+> **Experimental:** Ochiai-MS is a research contribution under active evaluation. Results and behavior may change in future releases.
+
+For the mathematical formulas and implementation details behind both algorithms, see the [Algorithm Documentation](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md) in the javelin-cli repository.
 
 ---
 
 ## Known Limitations
 
-- **Project must be compiled first.** Javelin operates on `.class` files and does not invoke the build tool. Run `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests` before analysis.
-- **Build-tool orchestrated tests.** Tests that require the build tool to manage external infrastructure (e.g., Arquillian server lifecycle, Maven Failsafe phase orchestration) are not supported. Most tests work, including Spring Boot `@SpringBootTest` and Testcontainers.
-- **JVM behavioral differences with older projects.** The plugin runs tests using either the project SDK (Java 11+) or IntelliJ's bundled JBR (Java 21) as a fallback. Projects targeting Java 8+ are fully supported and tested. Projects targeting Java 7 and below may encounter runtime differences when tests execute on a newer JVM, such as removed internal APIs, module access restrictions, or changed runtime defaults. Use the **Override JVM home** field to specify a JDK matching the project's target version. See the javelin-cli [JVM Compatibility](https://github.com/DesmondQue/javelin-cli#jvm-compatibility) documentation for full details.
+**Project must be compiled first.** Javelin analyzes `.class` files, not source code. Run your build before analysis: `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests`.
+
+**Build-tool orchestrated tests.** Tests requiring the build tool to manage infrastructure (e.g., Arquillian server lifecycle, Maven Failsafe phase orchestration) are not supported. Standard unit tests, Spring Boot `@SpringBootTest`, and Testcontainers tests all work.
+
+**Overlapping coverage highlights.** If IntelliJ's built-in coverage runner (or a third-party coverage plugin) is active at the same time, both tools highlight lines in the editor and their colors blend. Disable one tool's highlighting before running the other, or toggle Javelin's indicators from the toolbar.
+
+**JVM differences with older projects.** The plugin runs tests on the project SDK (Java 11+) or IntelliJ's bundled runtime (Java 21) as a fallback. Projects targeting Java 7 and below may encounter runtime differences. Use the **JVM home** field to specify a matching JDK. See the [JVM Compatibility](https://github.com/DesmondQue/javelin-cli#jvm-compatibility) docs for details.
+
+---
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| [Build Guide](javelin-plugin/docs/BUILDING.md) | Build from source, run in development mode, run tests |
+| [Architecture](javelin-plugin/docs/ARCHITECTURE.md) | System architecture, data flow, and design decisions |
+| [Algorithm Documentation](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md) | Ochiai and Ochiai-MS formulas, ranking strategies, method aggregation |
+| [CLI Troubleshooting](https://github.com/DesmondQue/javelin-cli/tree/main/javelin-core/docs) | Offline mode, output format, common issues |
 
 ---
 
@@ -199,7 +217,6 @@ See the CLI's [ALGORITHMS.md](https://github.com/DesmondQue/javelin-cli/blob/mai
 | Project | Description |
 |---|---|
 | [javelin-cli](https://github.com/DesmondQue/javelin-cli) | Command-line SBFL tool (standalone, Homebrew/Scoop installable) |
-| [javelin-cli docs](https://github.com/DesmondQue/javelin-cli/tree/main/javelin-core/docs) | Algorithm details, output format, offline mode, troubleshooting |
 
 ---
 
