@@ -131,7 +131,13 @@ public final class ConfigurationPanel extends JPanel {
         buildFirstCheckbox.addChangeListener(e -> JavelinUiSettings.setBuildFirst(project, buildFirstCheckbox.isSelected()));
         buildFirstCheckbox.setToolTipText("Compile the project before running analysis (disable if you build manually)");
 
-        offlineCheckbox.setToolTipText("Skip dependency resolution and use only the provided classpath");
+        offlineCheckbox.setToolTipText(
+                "<html>Pre-instruments bytecode before running tests instead of using a Java agent at runtime.<br><br>"
+                + "Enable this if your tests use libraries that attach their own Java agents<br>"
+                + "(e.g., Mockito-inline, ByteBuddy, PowerMock, JMockit, AspectJ), which can<br>"
+                + "conflict with JaCoCo's coverage agent.<br><br>"
+                + "Common agent conflicts are auto-detected, but enable this manually if you see<br>"
+                + "ClassFormatError or LinkageError during analysis.</html>");
 
         JPanel formPanel = new JPanel(new GridBagLayout());
         int row = 0;

@@ -95,7 +95,7 @@ Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven p
 | **Ranking** | `dense` for debugging (default), `average` for research evaluation. See [CLI docs](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md#ranking-strategies) for details. |
 | **Timeout** | Maximum analysis time in minutes (0 = no limit) |
 | **Threads** | Parallel test execution threads (defaults to CPU cores) |
-| **Offline mode** | Use pre-instrumented bytecode instead of a Java agent (needed for projects using mockito-inline, bytebuddy-agent, etc.) |
+| **Offline mode** | Pre-instruments bytecode instead of using a runtime Java agent. Common agent conflicts (Mockito-inline, ByteBuddy, PowerMock, JMockit, AspectJ) are auto-detected, but enable this manually if analysis fails with `ClassFormatError` or `LinkageError`. |
 
 </div>
 
