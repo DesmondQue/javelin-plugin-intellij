@@ -43,6 +43,15 @@ Download the latest `javelin-plugin-0.4.0.zip` from the [Releases](https://githu
 
 In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
 
+<br>
+
+<p align="center">
+  <img src="javelin-plugin/docs/images/javelin-intellij-plugin-page.png" alt="Javelin in the IntelliJ Plugins window" />
+</p>
+<p align="center"><em>Javelin as it appears in the IntelliJ IDEA Plugins window after installation</em></p>
+
+<br>
+
 > To build from source or run in development mode, see the [Build Guide](javelin-plugin/docs/BUILDING.md).
 
 ---
