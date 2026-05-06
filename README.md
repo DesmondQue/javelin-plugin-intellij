@@ -58,7 +58,7 @@ In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from D
 
 ## Quick Start
 
-1. **Compile your project:** `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests`
+1. **Compile your project:** `./gradlew classes testClasses` or `mvn compile test-compile -DskipTests` or `through IntelliJ`
 2. **Open the Javelin tool window.** It appears at the bottom of the IDE after installation.
 3. **Click Auto-Detect.** Javelin finds your compiled classes, test classes, and classpath automatically.
 4. **Click Run Javelin Analysis** (or press `Ctrl+Shift+J`).
