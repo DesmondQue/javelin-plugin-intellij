@@ -79,7 +79,7 @@ Click **Auto-Detect** to automatically resolve paths for both Gradle and Maven p
 <p align="center">
   <img src="javelin-plugin/docs/images/tooltip.png" alt="Algorithm tooltip" />
 </p>
-<p align="center"><em>Hovering over the Algorithm field shows a description of each option</em></p>
+<p align="center"><em>Hovering over an input field shows a description of each option</em></p>
 
 <br>
 
