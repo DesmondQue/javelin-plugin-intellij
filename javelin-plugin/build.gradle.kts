@@ -35,7 +35,7 @@ tasks.withType<Test>().configureEach {
 intellijPlatform {
     pluginConfiguration {
         id.set("com.javelin.plugin")
-        name.set("Javelin - An SBFL Tool for IntelliJ")
+        name.set("Javelin Fault Localization")
         version.set(project.version.toString())
         description.set("""
             <h2>Javelin: Spectrum-Based Fault Localization for Java</h2>
@@ -74,6 +74,7 @@ intellijPlatform {
               <li><b>Granularity:</b> Statement-level (default, ranks individual lines) or method-level (aggregates to methods using max score)</li>
               <li><b>Ranking:</b> Dense (default, recommended for debugging) or average/MID (for SBFL evaluation and EXAM scores)</li>
               <li><b>Offline mode:</b> Pre-instruments bytecode to avoid Java agent conflicts with Mockito-inline, ByteBuddy, PowerMock, JMockit, or AspectJ</li>
+              <li><b>Class name notation:</b> Inner and nested classes use JVM naming with <code>${'$'}</code> (e.g., <code>SearchQuery${'$'}Builder</code>). Method-level results use <code>#</code> to separate class and method (e.g., <code>Calculator#compute</code>).</li>
             </ul>
 
             <h3>Getting Started</h3>
