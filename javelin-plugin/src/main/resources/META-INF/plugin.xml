@@ -1,6 +1,6 @@
 <idea-plugin>
     <id>com.javelin.plugin</id>
-    <name>Javelin - An SBFL Tool for IntelliJ</name>
+    <name>Javelin Fault Localization</name>
     <vendor url="https://github.com/DesmondQue/javelin-plugin-intellij">TwentyOneCopilots</vendor>
 
     <description><![CDATA[
