@@ -263,6 +263,7 @@ public final class JavelinHighlightProvider implements JavelinResultsListener {
 
             TextAttributes attributes = baseAttributes == null ? new TextAttributes() : baseAttributes.clone();
             attributes.setBackgroundColor(withAlpha(suspicion.band().color(), 70));
+            attributes.setErrorStripeColor(null);
 
             RangeHighlighter highlighter = markupModel.addRangeHighlighter(
                     startOffset,
