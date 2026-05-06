@@ -169,6 +169,8 @@ The right side of the Javelin tool window displays results in a table grouped by
 
 <br>
 
+**Class name notation.** Inner and nested classes use the JVM's standard `$` separator (e.g., `SearchQuery$Builder`). Method-level results use the Javadoc `#` convention to separate class and method (e.g., `Calculator#compute`).
+
 Click any column header to sort. Use the filter field to search by class or method name. Right-click for copy and export options. The statistics bar at the bottom shows test counts (passed/failed), coverage metrics, execution timing, and mutation data when using Ochiai-MS.
 
 Double-click a row (or press `Enter`) to navigate to that line in the editor. Hovering over a selected row shows its file path, line number, and score:
