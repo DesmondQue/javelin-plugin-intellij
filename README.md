@@ -83,7 +83,7 @@ The left side of the Javelin tool window is the configuration panel, where you s
 <p align="center">
   <img src="javelin-plugin/docs/images/configuration-panel.png" alt="Configuration panel" />
 </p>
-<p align="center"><em>Configuration panel with auto-detected paths and Ochiai selected. The source directory field is required when using Ochiai-MS.</em></p>
+<p align="center"><em>Configuration panel with Ochiai selected (source directory is required for Ochiai-MS)</em></p>
 
 <br>
 
