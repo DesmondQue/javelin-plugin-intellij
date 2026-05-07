@@ -2,9 +2,11 @@
 
 **Turn test failures into a ranked list of suspicious code.**
 
-Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. "The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list grounded in test execution data, with every score fully traceable."
+Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list grounded in test execution data, with every score fully traceable.
 
 This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin brings it into IntelliJ IDEA as a one-click workflow with in-editor highlighting.
+
+Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely from test pass/fail outcomes and code coverage. The experimental **Ochiai-MS** extends this by running **mutation testing**: it injects small syntactic changes (mutants) into the suspicious region and measures how effectively each test detects them. Tests that kill more mutants in faulty areas receive higher weight, which can sharpen the ranking for bugs that Ochiai alone ranks ambiguously. For the full formulas and implementation details, see the [Algorithm Documentation](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md).
 
 <br>
 
@@ -176,6 +178,32 @@ The right side of the Javelin tool window displays results in a table grouped by
 **Class name notation.** Inner and nested classes use the JVM's standard `$` separator (e.g., `SearchQuery$Builder`). Method-level results use the Javadoc `#` convention to separate class and method (e.g., `Calculator#compute`).
 
 Click any column header to sort. Use the filter field to search by class or method name. Right-click for copy and export options. The statistics bar at the bottom shows test counts (passed/failed), coverage metrics, engine analysis time with total wall-clock time in parentheses, and mutation data when using Ochiai-MS.
+
+#### Stats Bar
+
+The bar at the bottom of the results panel summarizes the analysis run at a glance.
+
+<br>
+
+<p align="center">
+  <img src="javelin-plugin/docs/images/stats-bar.png" alt="Stats bar" />
+</p>
+<p align="center"><em>Stats bar showing test counts, coverage, engine time with total wall-clock time, and mutation data</em></p>
+
+<br>
+
+<div align="center">
+
+| Metric | Description |
+|---|:---|
+| **Tests** | Total tests executed, with passed and failed counts |
+| **Coverage** | Lines covered out of total lines tracked |
+| **Time** | Engine analysis time, with total wall-clock time (including JVM startup and result parsing) in parentheses |
+| **Mutations** | *(Ochiai-MS only)* Mutants killed, survived, and timed out |
+
+</div>
+
+<br>
 
 Double-click a row (or press `Enter`) to navigate to that line in the editor. Hovering over a selected row shows its file path, line number, and score:
 
