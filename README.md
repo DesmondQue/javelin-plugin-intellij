@@ -378,7 +378,7 @@ For the mathematical formulas and implementation details behind both algorithms,
 | [Architecture](javelin-plugin/docs/ARCHITECTURE.md) | System architecture, data flow, and design decisions |
 | [Java Compatibility](javelin-plugin/docs/JAVA_COMPATIBILITY.md) | Testing matrix, bytecode versions, and JVM selection |
 | [Algorithm Documentation](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md) | Ochiai and Ochiai-MS formulas, ranking strategies, method aggregation |
-| [CLI Troubleshooting](https://github.com/DesmondQue/javelin-cli/tree/main/javelin-core/docs) | Offline mode, output format, common issues |
+| [CLI Troubleshooting](https://github.com/DesmondQue/javelin-cli/blob/main/docs/TROUBLESHOOTING.md) | Offline mode, output format, common issues |
 
 </div>
 
