@@ -199,7 +199,7 @@ The bar at the bottom of the search bar in the results panel summarizes the anal
 | Metric | Description |
 |---|:---|
 | **Tests** | Total tests executed, with passed and failed counts |
-| **Coverage** | Lines covered out of total lines tracked |
+| **Coverage** | Number of source lines executed by at least one test, out of total lines instrumented |
 | **Time** | Engine analysis time, with total wall-clock time (including JVM startup and result parsing) in parentheses |
 | **Mutations** | *(Ochiai-MS only)* Mutants killed, survived, and timed out |
 
