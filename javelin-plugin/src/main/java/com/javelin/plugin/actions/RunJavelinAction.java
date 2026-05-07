@@ -20,6 +20,7 @@ import com.intellij.openapi.wm.ToolWindowManager;
 import com.javelin.plugin.config.JavelinUiSettings;
 import com.javelin.plugin.model.LocalizationResult;
 import com.javelin.plugin.model.MethodResult;
+import com.javelin.plugin.model.RunStats;
 import com.javelin.plugin.model.StatementResult;
 import com.javelin.plugin.service.JavelinService;
 import com.javelin.plugin.ui.JavelinHighlightProvider;
@@ -107,11 +108,18 @@ public final class RunJavelinAction extends AnAction {
                         });
 
                         LocalizationResult top = results.isEmpty() ? null : results.get(0);
+                        RunStats stats = service.getLastRunStats();
+                        long engineMs = stats != null
+                                ? stats.testExecMs() + stats.ochiaiMs() + stats.mutationMs() : 0L;
                         long durationNanos = service.getLastRunDurationNanos();
-                        double seconds = durationNanos > 0 ? durationNanos / 1_000_000_000.0 : 0.0;
+                        double totalSeconds = durationNanos > 0 ? durationNanos / 1_000_000_000.0 : 0.0;
+                        String timeStr = engineMs > 0
+                                ? String.format(Locale.ROOT, "%s (%.2fs total)",
+                                        formatDuration(engineMs), totalSeconds)
+                                : String.format(Locale.ROOT, "%.2fs", totalSeconds);
                         String title = top == null
-                                ? String.format(Locale.ROOT, "Found 0 entries in %.2fs.", seconds)
-                                : String.format(Locale.ROOT, "Found %d entries in %.2fs.", results.size(), seconds);
+                                ? String.format(Locale.ROOT, "Found 0 entries in %s.", timeStr)
+                                : String.format(Locale.ROOT, "Found %d entries in %s.", results.size(), timeStr);
                         String detail = top == null ? "" : switch (top) {
                             case StatementResult sr -> String.format(
                                     Locale.ROOT, "Top: %s:%d (score %.6f)",
@@ -178,5 +186,10 @@ public final class RunJavelinAction extends AnAction {
     private static String simpleClassName(String fullyQualifiedClass) {
         int lastDot = fullyQualifiedClass.lastIndexOf('.');
         return lastDot >= 0 ? fullyQualifiedClass.substring(lastDot + 1) : fullyQualifiedClass;
+    }
+
+    private static String formatDuration(long ms) {
+        if (ms < 1000) return ms + "ms";
+        return String.format(Locale.ROOT, "%.2fs", ms / 1000.0);
     }
 }

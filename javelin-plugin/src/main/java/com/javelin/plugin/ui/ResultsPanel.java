@@ -287,9 +287,14 @@ public final class ResultsPanel extends JPanel {
                 .append("  |  Coverage: ").append(stats.linesCovered())
                 .append("/").append(stats.linesTracked()).append(" lines");
 
-        long totalMs = stats.testExecMs() + stats.ochiaiMs() + stats.mutationMs();
-        if (totalMs > 0) {
-            sb.append("  |  ").append(formatDuration(totalMs));
+        long engineMs = stats.testExecMs() + stats.ochiaiMs() + stats.mutationMs();
+        if (engineMs > 0) {
+            sb.append("  |  ").append(formatDuration(engineMs));
+            long wallNanos = service.getLastRunDurationNanos();
+            if (wallNanos > 0) {
+                double wallSeconds = wallNanos / 1_000_000_000.0;
+                sb.append(String.format(Locale.ROOT, " (%.2fs total)", wallSeconds));
+            }
         }
 
         if (stats.hasMutationData()) {
