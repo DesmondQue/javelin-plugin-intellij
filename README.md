@@ -83,7 +83,7 @@ The left side of the Javelin tool window is the configuration panel, where you s
 <p align="center">
   <img src="javelin-plugin/docs/images/configuration-panel.png" alt="Configuration panel" />
 </p>
-<p align="center"><em>Configuration panel with auto-detected paths and analysis settings</em></p>
+<p align="center"><em>Configuration panel with auto-detected paths and Ochiai selected. The source directory field is required when using Ochiai-MS.</em></p>
 
 <br>
 
@@ -188,7 +188,7 @@ The bar at the bottom of the results panel summarizes the analysis run at a glan
 <p align="center">
   <img src="javelin-plugin/docs/images/stats-bar.png" alt="Stats bar" />
 </p>
-<p align="center"><em>Stats bar showing test counts, coverage, engine time with total wall-clock time, and mutation data</em></p>
+<p align="center"><em>Stats bar after an Ochiai-MS run, showing test counts, coverage, engine time with total wall-clock time, and mutation data</em></p>
 
 <br>
 
