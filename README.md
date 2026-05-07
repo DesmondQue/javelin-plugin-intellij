@@ -179,7 +179,9 @@ The right side of the Javelin tool window displays results in a table grouped by
 
 Click any column header to sort. Use the filter field to search by class or method name. Right-click for copy and export options. The statistics bar at the bottom shows test counts (passed/failed), coverage metrics, engine analysis time with total wall-clock time in parentheses, and mutation data when using Ochiai-MS.
 
-#### Stats Bar
+---
+
+### Stats Bar
 
 The bar at the bottom of the results panel summarizes the analysis run at a glance.
 
