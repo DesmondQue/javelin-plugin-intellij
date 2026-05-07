@@ -15,8 +15,6 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 
 <br>
 
-> **Windows Firewall notice:** On first run of **Ochiai-MS** analysis in a **fresh install**, Windows may show a firewall prompt for "OpenJDK Platform binary" (published by JetBrains). This is expected, as the bundled mutation testing engine ([PITest](https://pitest.org/)) uses localhost sockets to communicate with its worker processes. No external network connections are made. You can safely allow or dismiss the prompt; Windows remembers your choice for subsequent runs.
-
 ---
 
 ## Requirements
@@ -67,6 +65,8 @@ In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from D
 3. **Click Auto-Detect.** Javelin finds your compiled classes, test classes, and classpath automatically.
 4. **Click Run Javelin Analysis** (or press `Ctrl+Shift+J`).
 5. **Explore the results.** Double-click any row to jump to the suspicious line in your editor.
+
+> **Windows Firewall notice:** On first run of **Ochiai-MS** analysis in a **fresh install**, Windows may show a firewall prompt for "OpenJDK Platform binary" (published by JetBrains). This is expected, as the bundled mutation testing engine ([PITest](https://pitest.org/)) uses localhost sockets to communicate with its worker processes. No external network connections are made. You can safely allow or dismiss the prompt; Windows remembers your choice for subsequent runs.
 
 ---
 
