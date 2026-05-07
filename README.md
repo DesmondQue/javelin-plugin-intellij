@@ -4,7 +4,7 @@
 
 Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list grounded in test execution data, with every score fully traceable.
 
-This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin brings it into IntelliJ IDEA as a one-click workflow with in-editor highlighting.
+This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin brings it into IntelliJ IDEA as a one-click workflow with in-editor highlighting. Because SBFL works by analyzing your project's own code coverage, it is most effective when the fault is in your codebase rather than in an external library or API.
 
 Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely from test pass/fail outcomes and code coverage. The experimental **Ochiai-MS** extends this by running **mutation testing**: it injects small syntactic changes (mutants) into the suspicious region and measures how effectively each test detects them. Tests that kill more mutants in faulty areas receive higher weight, which can sharpen the ranking for bugs that Ochiai alone ranks ambiguously. For the full formulas and implementation details, see the [Algorithm Documentation](https://github.com/DesmondQue/javelin-cli/blob/main/docs/ALGORITHMS.md).
 
@@ -365,6 +365,8 @@ For the mathematical formulas and implementation details behind both algorithms,
 **Classpath auto-resolution.** The plugin resolves test dependencies automatically from IntelliJ's module dependency graph. If your tests depend on a JAR or directory that is not declared in your build configuration (Gradle, Maven, or module settings), it will not be included. Make sure all test dependencies are properly declared in your project. For manual classpath control, use the [CLI](https://github.com/DesmondQue/javelin-cli) with the `--classpath` flag.
 
 **JVM differences with older projects.** The plugin runs tests on the project SDK (Java 11+) or IntelliJ's bundled runtime (Java 21) as a fallback. Projects targeting Java 7 and below may encounter runtime differences. See the [Java Compatibility Guide](javelin-plugin/docs/JAVA_COMPATIBILITY.md) for details.
+
+**Faults in external libraries or APIs.** SBFL ranks lines within your project based on test coverage. If the root cause is in a third-party library, framework, or external API, those lines are not instrumented and will not appear in the results. In these cases, Javelin may still surface the call sites in your code that interact with the faulty dependency, but the scores will reflect your code's correlation with test failures rather than pointing directly at the external bug.
 
 ---
 
