@@ -66,7 +66,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <h3>0.5.0</h3>
+        <h3>1.0.0</h3>
         <ul>
           <li>Notification and stats bar now show engine analysis time separately from total wall-clock time</li>
           <li>Added stats bar section, Ochiai-MS introduction, and SBFL limitation note to README</li>
