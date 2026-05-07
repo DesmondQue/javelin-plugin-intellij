@@ -43,7 +43,7 @@ Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely 
 
 ## Installation
 
-Download the latest `javelin-plugin-0.4.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page.
+Download the latest `javelin-plugin-0.5.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page.
 
 In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
 
