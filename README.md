@@ -293,12 +293,12 @@ Click the widget to see a readiness checklist showing whether your project has e
 
 <div align="center">
 
-| Icon | Meaning |
+| Widget | Meaning |
 |---|:---|
-| **Javelin checkmark** | Ready to run |
+| **Javelin &#x2713;** | Ready to run |
 | **Javelin !** | Some checks failing |
-| **Javelin dash** | Not ready |
-| **Javelin spinner** | Analysis in progress |
+| **Javelin &#x2013;** | Not ready |
+| **Javelin &#x21BB;** | Analysis in progress |
 
 </div>
 
