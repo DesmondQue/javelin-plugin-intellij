@@ -15,6 +15,8 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 
 <br>
 
+> **Windows Firewall notice:** On first run of **Ochiai-MS** analysis, Windows may show a firewall prompt for "OpenJDK Platform binary" (published by JetBrains). This is expected — the bundled mutation testing engine ([PITest](https://pitest.org/)) uses localhost sockets to communicate with its worker processes. No external network connections are made. You can safely allow or dismiss the prompt; Windows remembers your choice for subsequent runs.
+
 ---
 
 ## Requirements
