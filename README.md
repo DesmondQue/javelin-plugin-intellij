@@ -144,7 +144,7 @@ You can start an analysis from several places:
 
 <br>
 
-A notification appears when analysis completes, showing the number of suspicious lines found, the top-ranked result, the engine analysis time, and the total wall-clock time (which includes JVM startup and result parsing overhead).
+A notification appears when analysis completes, showing the number of suspicious lines found, the top-ranked result, and two time values: the engine time (test execution + scoring + mutation) followed by the total time in parentheses. The total time includes overhead such as JVM startup, classpath resolution, and result parsing.
 
 ---
 
@@ -177,7 +177,7 @@ The right side of the Javelin tool window displays results in a table grouped by
 
 **Class name notation.** Inner and nested classes use the JVM's standard `$` separator (e.g., `SearchQuery$Builder`). Method-level results use the Javadoc `#` convention to separate class and method (e.g., `Calculator#compute`).
 
-Click any column header to sort. Use the filter field to search by class or method name. Right-click for copy and export options. The statistics bar at the bottom shows test counts (passed/failed), coverage metrics, engine analysis time with total wall-clock time in parentheses, and mutation data when using Ochiai-MS.
+Click any column header to sort. Use the filter field to search by class or method name. Right-click for copy and export options. The statistics bar at the bottom shows test counts (passed/failed), coverage metrics, time (engine time followed by total time in parentheses), and mutation data when using Ochiai-MS.
 
 ---
 
@@ -200,7 +200,7 @@ The bar at the bottom of the search bar in the results panel summarizes the anal
 |---|:---|
 | **Tests** | Total tests executed, with passed and failed counts |
 | **Coverage** | Lines executed by at least one test, out of total lines in the target classes |
-| **Time** | Engine analysis time, with total wall-clock time (including JVM startup and result parsing) in parentheses |
+| **Time** | Two numbers are shown: the first is the **engine time** (test execution + scoring + mutation, if applicable), and the second in parentheses is the **total time** from start to finish, which includes JVM startup, classpath resolution, and result parsing. The gap between the two represents that overhead. |
 | **Mutations** | *(Ochiai-MS only)* Mutants killed, survived, and timed out |
 
 </div>
