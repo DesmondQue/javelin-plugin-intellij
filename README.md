@@ -35,6 +35,8 @@ This technique is called **Spectrum-Based Fault Localization (SBFL)**. Javelin b
 
 > **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation. The plugin runs using IntelliJ's bundled runtime, and your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21). See the [Java Compatibility Guide](javelin-plugin/docs/JAVA_COMPATIBILITY.md) for the full testing matrix and bytecode version details.
 
+> **Platform support:** The plugin is pure JVM with no native dependencies, so it should work on Unix-based systems (Linux, macOS) as well as Windows. However, all testing has been done on Windows.
+
 ---
 
 ## Installation
