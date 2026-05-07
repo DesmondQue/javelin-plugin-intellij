@@ -6,6 +6,8 @@ Each `.class` file contains a major version number in its header that identifies
 
 ## Bytecode Version Reference
 
+<div align="center">
+
 | Java Version | Bytecode Major Version |
 |---|:---|
 | Java 8 | 52 |
@@ -13,11 +15,15 @@ Each `.class` file contains a major version number in its header that identifies
 | Java 17 | 61 |
 | Java 21 | 65 |
 
+</div>
+
 Java bytecode is forward-compatible: classes compiled for older JDKs will load and execute on newer JVMs without recompilation. A Java 8 project (bytecode 52) runs fine on a Java 21 runtime.
 
 ## Testing Matrix
 
 Javelin has been tested against real-world open-source projects from the [Defects4J](https://github.com/rjust/defects4j) benchmark across multiple Java versions.
+
+<div align="center">
 
 | Java Version | Bytecode | Testing Level | Projects Tested | Notes |
 |---|---|---|:---|:---|
@@ -25,6 +31,8 @@ Javelin has been tested against real-world open-source projects from the [Defect
 | **Java 11** | 55 | Heavy | Defects4J projects | Second primary target. Validated both algorithms and offline mode. |
 | **Java 17** | 61 | Light | gitbug-java projects | Spot-checked for compatibility. No issues found. |
 | **Java 21** | 65 | Light | personal Java projects | Spot-checked for compatibility. No issues found. |
+
+</div>
 
 > **Java 7 and below:** Not tested. Projects targeting Java 7 or older may encounter runtime differences when tests execute on a newer JVM (removed internal APIs, module access restrictions, changed defaults). See [Known Issues](#known-issues-with-older-projects) below.
 
@@ -43,10 +51,14 @@ You do not need Java 21 installed separately. The plugin uses IntelliJ's bundled
 
 The engine is compiled to Java 11 bytecode but requires Java 21+ to run (it uses Java 21 APIs internally). It analyzes your project's `.class` files using:
 
+<div align="center">
+
 | Component | Minimum JVM | What It Analyzes |
 |---|---|:---|
 | **JaCoCo 0.8.12** | Java 8+ | Java 5+ bytecode |
 | **PITest 1.17.4** | Java 11+ | Any bytecode loadable by the host JVM |
+
+</div>
 
 This means:
 - **Ochiai** (JaCoCo only) can analyze projects targeting **Java 8+**
