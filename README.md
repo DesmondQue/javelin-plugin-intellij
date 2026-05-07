@@ -183,7 +183,7 @@ Click any column header to sort. Use the filter field to search by class or meth
 
 ### Stats Bar
 
-The bar at the bottom of the results panel summarizes the analysis run at a glance.
+The bar at the bottom of the search bar in the results panel summarizes the analysis run at a glance, outputting test diagnostics.
 
 <br>
 
