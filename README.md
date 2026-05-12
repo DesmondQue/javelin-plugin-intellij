@@ -1,5 +1,7 @@
 # Javelin Plugin for IntelliJ IDEA
 
+[![JetBrains Marketplace](https://img.shields.io/badge/JetBrains_Marketplace-Javelin-blue?logo=jetbrains)](https://plugins.jetbrains.com/plugin/31691-javelin-fault-localization)
+
 **Turn test failures into a ranked list of suspicious code.**
 
 Javelin analyzes which lines of code are executed by your failing tests versus your passing tests, then ranks every line by how suspicious it looks. Lines that are always hit by failing tests and rarely hit by passing tests rank highest. The result: instead of reading through stack traces and stepping through a debugger, you get a ranked list grounded in test execution data, with every score fully traceable.
@@ -43,9 +45,15 @@ Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely 
 
 ## Installation
 
-Download the latest `javelin-plugin-1.0.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page.
+### From JetBrains Marketplace (recommended)
 
-In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
+Open IntelliJ IDEA, go to **Settings > Plugins > Marketplace**, search for **"Javelin"**, and click **Install**.
+
+Alternatively, install directly from the [Javelin Marketplace page](https://plugins.jetbrains.com/plugin/31691-javelin-fault-localization).
+
+### From Disk
+
+Download `javelin-plugin-1.0.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page. In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
 
 <br>
 
@@ -392,6 +400,7 @@ For the mathematical formulas and implementation details behind both algorithms,
 
 | Project | Description |
 |---|:---|
+| [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/31691-javelin-fault-localization) | Install Javelin directly from the marketplace |
 | [javelin-cli](https://github.com/DesmondQue/javelin-cli) | Command-line SBFL tool (standalone, Homebrew/Scoop installable) |
 
 </div>
