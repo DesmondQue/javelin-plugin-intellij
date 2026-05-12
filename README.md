@@ -45,15 +45,15 @@ Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely 
 
 ## Installation
 
-### From JetBrains Marketplace (recommended)
+### From Disk
+
+Download `javelin-plugin-1.0.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page. In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
+
+### From JetBrains Marketplace
 
 Open IntelliJ IDEA, go to **Settings > Plugins > Marketplace**, search for **"Javelin"**, and click **Install**.
 
 Alternatively, install directly from the [Javelin Marketplace page](https://plugins.jetbrains.com/plugin/31691-javelin-fault-localization).
-
-### From Disk
-
-Download `javelin-plugin-1.0.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page. In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
 
 <br>
 
