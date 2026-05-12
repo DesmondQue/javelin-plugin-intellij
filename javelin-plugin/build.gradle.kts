@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.javelin"
-version = "1.0.0"
+version = "1.0.1"
 
 java {
     toolchain {
@@ -104,8 +104,20 @@ intellijPlatform {
         }
         ideaVersion {
             sinceBuild.set("251")
-            untilBuild.set("253.*")
+            untilBuild.set(provider { null })
         }
+    }
+    signing {
+        certificateChainFile.set(
+            providers.environmentVariable("CERTIFICATE_CHAIN").map { layout.projectDirectory.file(it) }
+        )
+        privateKeyFile.set(
+            providers.environmentVariable("PRIVATE_KEY").map { layout.projectDirectory.file(it) }
+        )
+        password.set(providers.environmentVariable("PRIVATE_KEY_PASSWORD"))
+    }
+    publishing {
+        token.set(providers.environmentVariable("PUBLISH_TOKEN"))
     }
 }
 
