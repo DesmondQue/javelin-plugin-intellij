@@ -29,7 +29,7 @@ Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely 
 
 | Requirement | Details |
 |---|:---|
-| **IntelliJ IDEA** | 2025.1 through 2025.3.x (Community or Ultimate) |
+| **IntelliJ IDEA** | 2025.1 through 2026.1.x (Community or Ultimate) |
 | **Java project** | Must be compiled (`.class` files present) with JUnit tests |
 | **At least 1 failing test** | Javelin needs failing tests to identify suspicious code |
 
@@ -37,6 +37,8 @@ Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely 
 
 <br>
 
+> **IntelliJ IDEA 2026.1:** Version 1.0.1 adds compatibility for IntelliJ IDEA 2026.1.x. This update is currently under evaluation by the JetBrains Marketplace and may not yet be available for automatic installation. If the marketplace version is not yet updated, use **Install Plugin from Disk** with the 1.0.1 release ZIP.
+>
 > **Note:** The plugin bundles its own analysis engine. You do **not** need a separate JDK 21 installation. The plugin runs using IntelliJ's bundled runtime, and your project can use **Java 8 or later** (tested on Java 8, 11, 17, and 21). See the [Java Compatibility Guide](javelin-plugin/docs/JAVA_COMPATIBILITY.md) for the full testing matrix and bytecode version details.
 
 > **Platform support:** The plugin is pure JVM with no native dependencies, so it should work on Unix-based systems (Linux, macOS) as well as Windows. However, all testing has been done on Windows.
@@ -47,7 +49,7 @@ Javelin ships with two algorithms. The default, **Ochiai**, scores lines purely 
 
 ### From Disk
 
-Download `javelin-plugin-1.0.0.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page. In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
+Download `javelin-plugin-1.0.1.zip` from the [Releases](https://github.com/DesmondQue/javelin-plugin-intellij/releases) page. In IntelliJ IDEA, go to **Settings > Plugins > Gear icon > Install Plugin from Disk...**, select the `.zip` file, and restart the IDE when prompted.
 
 ### From JetBrains Marketplace
 
