@@ -34,6 +34,8 @@ import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableCellRenderer;
+
+import com.intellij.openapi.application.ApplicationManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
@@ -258,7 +260,7 @@ public final class ResultsPanel extends JPanel {
 
     public void updateResults(List<LocalizationResult> results) {
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> updateResults(results));
+            ApplicationManager.getApplication().invokeLater(() -> updateResults(results));
             return;
         }
         currentResults = List.copyOf(results);

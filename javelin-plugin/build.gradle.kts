@@ -88,7 +88,7 @@ intellijPlatform {
 
             <h3>Requirements</h3>
             <ul>
-              <li>IntelliJ IDEA 2025.1 through 2025.3.x (Community or Ultimate)</li>
+              <li>IntelliJ IDEA 2025.1 and later (Community or Ultimate)</li>
               <li>A compiled Java project (Java 8 or later) with JUnit tests</li>
               <li>At least one failing test (SBFL requires a fault to localize)</li>
             </ul>

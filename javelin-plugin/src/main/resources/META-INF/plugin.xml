@@ -54,7 +54,7 @@
 
         <h3>Requirements</h3>
         <ul>
-          <li>IntelliJ IDEA 2025.1 through 2025.3.x (Community or Ultimate)</li>
+          <li>IntelliJ IDEA 2025.1 and later (Community or Ultimate)</li>
           <li>A compiled Java project (Java 8 or later) with JUnit tests</li>
           <li>At least one failing test (SBFL requires a fault to localize)</li>
         </ul>
@@ -68,8 +68,9 @@
     <change-notes><![CDATA[
         <h3>1.0.1</h3>
         <ul>
-          <li>Restricted compatibility to IntelliJ IDEA only (removed unverified Android Studio listing)</li>
-          <li>Removed IntelliJ version upper bound to support future releases</li>
+          <li>Fixed EDT threading violation on IntelliJ IDEA 2026.1 when running analysis from the tool window button</li>
+          <li>Wrapped project model reads in explicit ReadAction for 2026 platform compliance</li>
+          <li>Updated compatibility declaration to IntelliJ IDEA 2025.1 and later (including 2026.1)</li>
         </ul>
         <h3>1.0.0</h3>
         <ul>

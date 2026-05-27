@@ -13,6 +13,7 @@ import javax.swing.JPanel;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.compiler.CompilationStatusListener;
 import com.intellij.openapi.compiler.CompilerTopics;
 import com.intellij.openapi.project.DumbService;
@@ -127,7 +128,7 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
         public void refresh() {
             JavelinService service = project.getService(JavelinService.class);
             boolean running = service != null && service.isRunning();
-            List<JavelinStatusPopupPanel.Requirement> reqs = computeRequirements();
+            List<JavelinStatusPopupPanel.Requirement> reqs = ReadAction.compute(this::computeRequirements);
             boolean ready = reqs.stream().allMatch(r -> r.ok());
 
             if (running) {
@@ -155,7 +156,7 @@ public final class JavelinStatusBarWidgetFactory implements StatusBarWidgetFacto
             refresh();
             JavelinService service = project.getService(JavelinService.class);
             boolean running = service != null && service.isRunning();
-            List<JavelinStatusPopupPanel.Requirement> reqs = computeRequirements();
+            List<JavelinStatusPopupPanel.Requirement> reqs = ReadAction.compute(this::computeRequirements);
 
             double lastRunSeconds = 0;
             int suspiciousCount = 0;

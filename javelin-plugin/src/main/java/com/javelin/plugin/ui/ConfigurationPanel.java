@@ -22,6 +22,8 @@ import javax.swing.SpinnerNumberModel;
 
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.project.Project;
@@ -178,9 +180,15 @@ public final class ConfigurationPanel extends JPanel {
     }
 
     public void autoDetect() {
-        Path target = PathDetector.detectTargetPath(project);
-        Path test = PathDetector.detectTestPath(project);
-        Path source = PathDetector.detectSourcePath(project);
+        Path[] paths = ReadAction.compute(() -> {
+            Path target = PathDetector.detectTargetPath(project);
+            Path test = PathDetector.detectTestPath(project);
+            Path source = PathDetector.detectSourcePath(project);
+            return new Path[]{target, test, source};
+        });
+        Path target = paths[0];
+        Path test = paths[1];
+        Path source = paths[2];
 
         targetField.setText(target.toString());
         testField.setText(test.toString());
@@ -284,8 +292,10 @@ public final class ConfigurationPanel extends JPanel {
         boolean offline = isOffline();
 
         setRunning(true);
-        RunJavelinAction.runAnalysis(project, algorithm, threads, target, test, source, offline,
-                () -> setRunning(false));
+        ApplicationManager.getApplication().invokeLater(() ->
+            RunJavelinAction.runAnalysis(project, algorithm, threads, target, test, source, offline,
+                    () -> setRunning(false))
+        );
     }
 
     private void updateSourceDirVisibility() {
