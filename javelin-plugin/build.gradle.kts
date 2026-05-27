@@ -104,7 +104,7 @@ intellijPlatform {
         }
         ideaVersion {
             sinceBuild.set("251")
-            untilBuild.set(provider { null })
+            untilBuild.set("261.*")
         }
     }
     signing {
